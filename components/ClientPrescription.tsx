@@ -1,4 +1,3 @@
-
 import React from 'react';
 import type { SelectedRemedy } from '../types';
 
@@ -20,6 +19,13 @@ const BackIcon: React.FC<React.SVGProps<SVGSVGElement>> = (props) => (
     </svg>
 );
 
+const ExportIcon: React.FC<React.SVGProps<SVGSVGElement>> = (props) => (
+    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" {...props}>
+        <path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5v2.25A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75V16.5M16.5 12 12 16.5m0 0L7.5 12m4.5 4.5V3" />
+    </svg>
+);
+
+
 export const ClientPrescription: React.FC<ClientPrescriptionProps> = ({
   patientName,
   selectedRemedies,
@@ -27,6 +33,33 @@ export const ClientPrescription: React.FC<ClientPrescriptionProps> = ({
 }) => {
   const handlePrint = () => {
     window.print();
+  };
+
+  const handleExportCSV = () => {
+    const headers = ['Remedy Name', 'Abbreviation', 'Potencies'];
+    const rows = selectedRemedies.map(remedy => [
+      `"${remedy.name.replace(/"/g, '""')}"`, // Handle quotes in names
+      `"${remedy.abbreviation.replace(/"/g, '""')}"`,
+      `"${remedy.potencies.join(' | ')}"`
+    ]);
+
+    const csvContent = [
+      headers.join(','),
+      ...rows.map(row => row.join(','))
+    ].join('\n');
+
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    if(link.download !== undefined) { // feature detection
+        const url = URL.createObjectURL(blob);
+        const safePatientName = patientName.replace(/[^a-z0-9]/gi, '_').toLowerCase();
+        link.setAttribute('href', url);
+        link.setAttribute('download', `${safePatientName || 'prescription'}_remedies.csv`);
+        link.style.visibility = 'hidden';
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+    }
   };
   
   return (
@@ -39,13 +72,22 @@ export const ClientPrescription: React.FC<ClientPrescriptionProps> = ({
                 <BackIcon className="h-5 w-5"/>
                 New Client Form
             </button>
-            <button
-                onClick={handlePrint}
-                className="flex items-center gap-2 px-4 py-2 bg-cyan-600 hover:bg-cyan-700 text-white font-medium rounded-md transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-cyan-500 focus:ring-offset-slate-900"
-            >
-                <PrintIcon className="h-5 w-5"/>
-                Print
-            </button>
+            <div className="flex items-center gap-4">
+                 <button
+                    onClick={handleExportCSV}
+                    className="flex items-center gap-2 px-4 py-2 bg-slate-700 hover:bg-slate-600 text-white font-medium rounded-md transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-slate-500 focus:ring-offset-slate-900"
+                >
+                    <ExportIcon className="h-5 w-5"/>
+                    Export CSV
+                </button>
+                <button
+                    onClick={handlePrint}
+                    className="flex items-center gap-2 px-4 py-2 bg-cyan-600 hover:bg-cyan-700 text-white font-medium rounded-md transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-cyan-500 focus:ring-offset-slate-900"
+                >
+                    <PrintIcon className="h-5 w-5"/>
+                    Print
+                </button>
+            </div>
         </div>
       
         <div className="bg-white text-slate-800 p-8 md:p-12 rounded-lg shadow-2xl printable-area">
@@ -61,20 +103,22 @@ export const ClientPrescription: React.FC<ClientPrescriptionProps> = ({
         
             <div>
                 <h2 className="text-lg font-semibold text-slate-700 mb-4">Selected Remedies</h2>
-                <div className="flow-root">
-                    <ul role="list" className="-my-4 divide-y divide-slate-200">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-x-12 gap-y-1" role="list">
                     {selectedRemedies.map((remedy) => (
-                        <li key={remedy.srNo} className="flex items-center py-4 space-x-4">
-                            <div className="flex-1 min-w-0">
-                                <p className="text-md font-medium text-slate-900 truncate">{remedy.name}</p>
-                                <p className="text-sm text-slate-500 truncate">{remedy.abbreviation}</p>
+                        <div key={remedy.srNo} className="flex items-center justify-between py-3 border-b border-slate-200" role="listitem">
+                            <div className="flex-1 min-w-0 pr-4">
+                                <p className="text-md font-medium text-slate-900 truncate" title={remedy.name}>
+                                    {remedy.name}
+                                </p>
+                                <p className="text-sm text-slate-500 truncate" title={remedy.abbreviation}>
+                                    {remedy.abbreviation}
+                                </p>
                             </div>
-                            <div className="inline-flex items-center text-base font-semibold text-slate-900">
+                            <div className="text-base font-semibold text-slate-900 text-right">
                                 {remedy.potencies.join(', ')}
                             </div>
-                        </li>
+                        </div>
                     ))}
-                    </ul>
                 </div>
             </div>
             <div className="mt-12 text-center text-xs text-slate-400 print:block hidden">
@@ -93,10 +137,12 @@ export const ClientPrescription: React.FC<ClientPrescriptionProps> = ({
                     max-width: 100%;
                     border-radius: 0;
                 }
+                .grid {
+                  grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+                }
             }
           `}
         </style>
     </div>
   );
 };
-   
