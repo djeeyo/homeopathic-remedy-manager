@@ -326,7 +326,7 @@ Patient Name,,,,,Potency,,,,,
 ,,B 320,HELIA,HELIANTHUS ANNUUS (HELIANTHUS),,,,,,
 ,,B 321,HELL,HELLEBORUS NIGER (HELLEBORUS),,,,,,
 ,,B 322,HELO,HELODERMA,,,,,,
-,,B 323,HELON,HELONIAS DIOICA (HELONIAS - CHAMAELIRIUM),,,,,,
+,,B 323,HELON,HELONias DIOICA (HELONIAS - CHAMAELIRIUM),,,,,,
 ,,B 324,HEP,HEPAR SULPHUR (HEPAR SULPHURIS CALCAREUM),,,,,,
 ,,B 325,HEPAT,HEPATICA TRILOBA (HEPATICA),,,,,,
 ,,B 326,HERA,HERACLEUM SPHONDYLIUM (HERACLEUM - BRANCA URSINA),,,,,,
@@ -403,7 +403,7 @@ Patient Name,,,,,Potency,,,,,
 ,,B 397,LEPT,LEPTANDRA VIRGINICA (LEPTANDRA),,,,,,
 ,,B 398,LIAT,LIATRIS SPICATA (LIATRIS SPICATA - SERRATULA),,,,,,
 ,,B 399,LIL-T,LILIUM TIGRINUM,,,,,,
-,,B 400,LIM,LIMULUS CYCLOPS (LIMULUS - XIPHOSURA),,,,,,
+,,B 400,LIM,LIMULus CYCLOPS (LIMULUS - XIPHOSURA),,,,,,
 ,,B 401,LINA,LINARIA VULGARIS (LINARIA),,,,,,
 ,,B 402,LINU-U,LINUM USITATISSIMUM,,,,,,
 ,,B 403,LITH-C,LITHIUM CARBONICUM,,,,,,
@@ -702,7 +702,7 @@ Patient Name,,,,,Potency,,,,,
 ,,B 696,ANDRO,ANDROGRAPHIS PANICULATA,,,,,,
 `;
 
-const parseRemedies = (csv: string): Remedy[] => {
+export const parseRemedies = (csv: string): Remedy[] => {
   const lines = csv.trim().split('\n');
   const remedies: Remedy[] = [];
   // Skip header lines (first 2 lines)
@@ -714,11 +714,16 @@ const parseRemedies = (csv: string): Remedy[] => {
         abbreviation: columns[3].trim(),
         name: columns[4].trim(),
       };
-      remedies.push(remedy);
+      // Basic validation to avoid parsing garbage lines
+      if (remedy.srNo.startsWith('B')) {
+        remedies.push(remedy);
+      }
     }
+  }
+  if (remedies.length === 0) {
+      throw new Error("Could not parse any remedies from the file. Please ensure it follows the expected CSV format.");
   }
   return remedies;
 };
 
 export const masterRemedyList: Remedy[] = parseRemedies(CSV_DATA);
-   

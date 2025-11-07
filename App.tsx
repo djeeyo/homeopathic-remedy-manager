@@ -1,8 +1,9 @@
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { RemedySelectionForm } from './components/RemedySelectionForm';
 import { ClientPrescription } from './components/ClientPrescription';
-import { masterRemedyList } from './constants/remedyData';
+import { MasterInventoryManager } from './components/MasterInventoryManager';
+import { masterRemedyList, parseRemedies } from './constants/remedyData';
 import type { ClientSelections, SelectedRemedy, Remedy } from './types';
 
 enum AppView {
@@ -10,10 +11,60 @@ enum AppView {
   Prescription,
 }
 
+const LOCAL_STORAGE_KEY = 'homeopathic_remedy_inventory';
+
 const App: React.FC = () => {
   const [view, setView] = useState<AppView>(AppView.Selection);
   const [patientName, setPatientName] = useState<string>('');
   const [selections, setSelections] = useState<ClientSelections>({});
+  const [remedies, setRemedies] = useState<Remedy[]>(() => {
+    try {
+      const storedRemedies = window.localStorage.getItem(LOCAL_STORAGE_KEY);
+      if (storedRemedies) {
+        return JSON.parse(storedRemedies);
+      }
+    } catch (error) {
+      console.error("Failed to load remedies from local storage", error);
+      window.localStorage.removeItem(LOCAL_STORAGE_KEY);
+    }
+    return masterRemedyList;
+  });
+  const [isDefaultList, setIsDefaultList] = useState(true);
+
+  useEffect(() => {
+    // A simple check to see if the current list is the default one
+    const isDefault = remedies.length === masterRemedyList.length && remedies[0]?.srNo === masterRemedyList[0]?.srNo;
+    setIsDefaultList(isDefault);
+
+    if (!isDefault) {
+      try {
+        window.localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(remedies));
+      } catch (error) {
+        console.error("Failed to save remedies to local storage", error);
+        alert("Could not save the new inventory list. Your browser's storage might be full.");
+      }
+    }
+  }, [remedies]);
+
+  const handleUpdateInventory = (csvData: string) => {
+    try {
+      const newRemedies = parseRemedies(csvData);
+      setRemedies(newRemedies);
+      setSelections({}); 
+      alert(`Successfully updated inventory with ${newRemedies.length} remedies.`);
+    } catch (error) {
+      console.error("Failed to parse CSV file:", error);
+      alert(`Error parsing file: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
+  };
+  
+  const handleResetInventory = () => {
+    if (window.confirm("Are you sure you want to reset to the default inventory list? This will remove your custom list.")) {
+      window.localStorage.removeItem(LOCAL_STORAGE_KEY);
+      setRemedies(masterRemedyList);
+      setSelections({});
+    }
+  };
 
   const handleGeneratePrescription = () => {
     if (patientName.trim() && Object.keys(selections).length > 0) {
@@ -28,8 +79,7 @@ const App: React.FC = () => {
   };
 
   const selectedRemedies: SelectedRemedy[] = useMemo(() => {
-    const allRemediesMap = new Map<string, Remedy>(masterRemedyList.map(r => [r.srNo, r]));
-    // FIX: Use Object.keys to avoid type inference issues with Object.entries.
+    const allRemediesMap = new Map<string, Remedy>(remedies.map(r => [r.srNo, r]));
     return Object.keys(selections)
       .map((srNo) => {
         const remedyDetails = allRemediesMap.get(srNo);
@@ -44,19 +94,26 @@ const App: React.FC = () => {
       })
       .filter((r): r is SelectedRemedy => r !== null)
       .sort((a,b) => a.name.localeCompare(b.name));
-  }, [selections]);
+  }, [selections, remedies]);
 
   return (
     <div className="min-h-screen bg-slate-900 text-slate-100 font-sans">
       <header className="bg-gradient-to-r from-cyan-500 to-blue-600 p-4 shadow-lg text-center">
-        <h1 className="text-2xl md:text-4xl font-bold tracking-tight text-white">
-          Homeopathic Remedy Manager
-        </h1>
+         <div className="container mx-auto flex justify-between items-center">
+            <h1 className="text-xl md:text-3xl font-bold tracking-tight text-white text-left flex-1">
+              Homeopathic Remedy Manager
+            </h1>
+            <MasterInventoryManager
+                onUpdateInventory={handleUpdateInventory}
+                onResetInventory={handleResetInventory}
+                isDefaultList={isDefaultList}
+            />
+        </div>
       </header>
       <main className="p-4 md:p-8">
         {view === AppView.Selection ? (
           <RemedySelectionForm
-            remedies={masterRemedyList}
+            remedies={remedies}
             patientName={patientName}
             setPatientName={setPatientName}
             selections={selections}

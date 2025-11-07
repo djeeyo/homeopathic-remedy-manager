@@ -1,7 +1,13 @@
-
 import React, { useState, useMemo } from 'react';
 import type { Remedy, Potency, ClientSelections } from '../types';
 import { POTENCIES } from '../types';
+
+// Define types for sorting
+type SortKey = 'name' | 'abbreviation';
+interface SortConfig {
+  key: SortKey;
+  direction: 'asc' | 'desc';
+}
 
 interface RemedySelectionFormProps {
   remedies: Remedy[];
@@ -18,6 +24,25 @@ const SearchIcon: React.FC<React.SVGProps<SVGSVGElement>> = (props) => (
   </svg>
 );
 
+const SortIndicator: React.FC<{ active: boolean; direction: 'asc' | 'desc' }> = ({ active, direction }) => {
+  if (!active) {
+    return (
+        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="h-4 w-4 ml-1 text-slate-500 opacity-0 group-hover:opacity-100 transition-opacity">
+            <path strokeLinecap="round" strokeLinejoin="round" d="M8.25 15 12 18.75 15.75 15m-7.5-6L12 5.25 15.75 9" />
+        </svg>
+    );
+  }
+  const d = direction === 'asc'
+    ? "m19 9-7 7-7-7" // Down arrow (A-Z)
+    : "m5 15 7-7 7 7";  // Up arrow (Z-A)
+  return (
+    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={3} stroke="currentColor" className="h-3 w-3 ml-1 text-cyan-400">
+      <path strokeLinecap="round" strokeLinejoin="round" d={d} />
+    </svg>
+  );
+};
+
+
 export const RemedySelectionForm: React.FC<RemedySelectionFormProps> = ({
   remedies,
   patientName,
@@ -27,6 +52,7 @@ export const RemedySelectionForm: React.FC<RemedySelectionFormProps> = ({
   onGenerate,
 }) => {
   const [searchTerm, setSearchTerm] = useState('');
+  const [sortConfig, setSortConfig] = useState<SortConfig>({ key: 'name', direction: 'asc' });
 
   const handleSelectionChange = (srNo: string, potency: Potency) => {
     setSelections(prev => {
@@ -47,15 +73,31 @@ export const RemedySelectionForm: React.FC<RemedySelectionFormProps> = ({
       return newSelections;
     });
   };
+  
+  const requestSort = (key: SortKey) => {
+    let direction: 'asc' | 'desc' = 'asc';
+    if (sortConfig.key === key && sortConfig.direction === 'asc') {
+      direction = 'desc';
+    }
+    setSortConfig({ key, direction });
+  };
 
-  const filteredRemedies = useMemo(() => {
-    if (!searchTerm) return remedies;
+  const sortedAndFilteredRemedies = useMemo(() => {
     const lowercasedFilter = searchTerm.toLowerCase();
-    return remedies.filter(remedy =>
-      remedy.name.toLowerCase().includes(lowercasedFilter) ||
-      remedy.abbreviation.toLowerCase().includes(lowercasedFilter)
-    );
-  }, [remedies, searchTerm]);
+    const filtered = searchTerm
+        ? remedies.filter(remedy =>
+            remedy.name.toLowerCase().includes(lowercasedFilter) ||
+            remedy.abbreviation.toLowerCase().includes(lowercasedFilter)
+        )
+        : [...remedies];
+
+    return filtered.sort((a, b) => {
+        const key = sortConfig.key;
+        const direction = sortConfig.direction === 'asc' ? 1 : -1;
+        // Using localeCompare for robust string sorting
+        return a[key].localeCompare(b[key]) * direction;
+    });
+}, [remedies, searchTerm, sortConfig]);
   
   const selectionCount = Object.keys(selections).length;
   const isFormValid = patientName.trim() !== '' && selectionCount > 0;
@@ -101,15 +143,25 @@ export const RemedySelectionForm: React.FC<RemedySelectionFormProps> = ({
         <div className="overflow-x-auto">
             <div className="h-[60vh] overflow-y-auto">
                 <table className="min-w-full divide-y divide-slate-700">
-                    <thead className="bg-slate-800 sticky top-0">
+                    <thead className="bg-slate-800 sticky top-0 z-10">
                         <tr>
-                            <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-cyan-300 uppercase tracking-wider">Name</th>
-                            <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-cyan-300 uppercase tracking-wider">Abbreviation</th>
+                            <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-cyan-300 uppercase tracking-wider">
+                                <button onClick={() => requestSort('name')} className="flex items-center group focus:outline-none">
+                                    Name
+                                    <SortIndicator active={sortConfig.key === 'name'} direction={sortConfig.direction} />
+                                </button>
+                            </th>
+                            <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-cyan-300 uppercase tracking-wider">
+                                <button onClick={() => requestSort('abbreviation')} className="flex items-center group focus:outline-none">
+                                    Abbreviation
+                                    <SortIndicator active={sortConfig.key === 'abbreviation'} direction={sortConfig.direction} />
+                                </button>
+                            </th>
                             <th scope="col" colSpan={3} className="px-6 py-3 text-center text-xs font-medium text-cyan-300 uppercase tracking-wider">Potency</th>
                         </tr>
                     </thead>
                     <tbody className="bg-slate-800 divide-y divide-slate-700">
-                        {filteredRemedies.map((remedy) => (
+                        {sortedAndFilteredRemedies.map((remedy) => (
                         <tr key={remedy.srNo} className={`transition-colors ${selections[remedy.srNo] ? 'bg-cyan-900/30' : 'hover:bg-slate-700/50'}`}>
                             <td className="px-6 py-4 whitespace-nowrap">
                                 <div className="text-sm font-medium text-slate-200">{remedy.name}</div>
@@ -155,4 +207,3 @@ export const RemedySelectionForm: React.FC<RemedySelectionFormProps> = ({
     </div>
   );
 };
-   
