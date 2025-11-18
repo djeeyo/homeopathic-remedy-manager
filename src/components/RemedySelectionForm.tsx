@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useRef } from 'react';
+import React, { useState, useMemo } from 'react';
 import type { Remedy, Potency, ClientSelections } from '../types';
 import { POTENCIES } from '../types';
 import { REMEDY_KEYNOTES } from '../constants/remedyKeynotes';
@@ -93,12 +93,6 @@ const SortIndicator: React.FC<{ active: boolean; direction: 'asc' | 'desc' }> = 
   );
 };
 
-type TooltipState = {
-  srNo: string;
-  abbr: string;
-  position: { top: number; left: number };
-} | null;
-
 export const RemedySelectionForm: React.FC<RemedySelectionFormProps> = ({
   remedies,
   patientName,
@@ -113,10 +107,8 @@ export const RemedySelectionForm: React.FC<RemedySelectionFormProps> = ({
     direction: 'asc',
   });
 
-  // Keynote tooltip + clicked remedy
-  const [activeTooltip, setActiveTooltip] = useState<TooltipState>(null);
-  const [selectedRemedy, setSelectedRemedy] = useState<Remedy | null>(null);
-  const hoverTimeoutRef = useRef<number | null>(null);
+  // Which remedy is currently in focus for the keynote panel
+  const [focusedRemedy, setFocusedRemedy] = useState<Remedy | null>(null);
 
   const handleSelectionChange = (srNo: string, potency: Potency) => {
     setSelections((prev) => {
@@ -146,45 +138,6 @@ export const RemedySelectionForm: React.FC<RemedySelectionFormProps> = ({
     setSortConfig({ key, direction });
   };
 
-  const handleRowMouseEnter = (
-    remedy: Remedy,
-    event: React.MouseEvent<HTMLTableRowElement>
-  ) => {
-    if (hoverTimeoutRef.current) {
-      clearTimeout(hoverTimeoutRef.current);
-    }
-
-    hoverTimeoutRef.current = window.setTimeout(() => {
-      const rect = event.currentTarget.getBoundingClientRect();
-      const top = rect.top + rect.height / 2;
-      const left = rect.right + 10;
-
-      const tooltipWidth = 320; // w-80
-      const adjustedLeft =
-        left + tooltipWidth > window.innerWidth
-          ? rect.left - tooltipWidth - 10
-          : left;
-
-      setActiveTooltip({
-        srNo: remedy.srNo,
-        abbr: remedy.abbreviation,
-        position: { top, left: adjustedLeft },
-      });
-    }, 300);
-  };
-
-  const handleRowMouseLeave = (
-    event: React.MouseEvent<HTMLTableRowElement>
-  ) => {
-    if (hoverTimeoutRef.current) {
-      clearTimeout(hoverTimeoutRef.current);
-    }
-    if (event.currentTarget.contains(event.relatedTarget as Node)) {
-      return;
-    }
-    setActiveTooltip(null);
-  };
-
   const sortedAndFilteredRemedies = useMemo(() => {
     const lowercasedFilter = searchTerm.toLowerCase();
     const filtered = searchTerm
@@ -205,65 +158,14 @@ export const RemedySelectionForm: React.FC<RemedySelectionFormProps> = ({
   const selectionCount = Object.keys(selections).length;
   const isFormValid = patientName.trim() !== '' && selectionCount > 0;
 
+  // Precompute keynote data for the focused remedy
+  const focusedKeynotes = focusedRemedy
+    ? REMEDY_KEYNOTES[focusedRemedy.abbreviation]
+    : null;
+
   return (
     <div className="space-y-6">
-      {/* Keynote tooltip from RemedyKeynotesSheet */}
-      {activeTooltip && (
-        <div
-          className="fixed z-50 w-80 p-4 bg-slate-900 border border-slate-700 rounded-lg shadow-2xl text-slate-300 animate-fade-in-fast"
-          style={{
-            top: `${activeTooltip.position.top}px`,
-            left: `${activeTooltip.position.left}px`,
-            transform: 'translateY(-50%)',
-          }}
-          role="tooltip"
-        >
-          {(() => {
-            const keynotes = REMEDY_KEYNOTES[activeTooltip.abbr];
-            if (!keynotes) {
-              return (
-                <p className="text-sm text-slate-400">
-                  No keynotes available for this remedy.
-                </p>
-              );
-            }
-            return (
-              <div className="space-y-1 text-sm">
-                <p className="font-semibold text-cyan-300">
-                  {keynotes.remedyName} ({keynotes.abbreviation})
-                </p>
-                {keynotes.mentalEmotionalThemes && (
-                  <p>
-                    <span className="font-semibold">Mind:</span>{' '}
-                    {keynotes.mentalEmotionalThemes}
-                  </p>
-                )}
-                {keynotes.generalThemes && (
-                  <p>
-                    <span className="font-semibold">General:</span>{' '}
-                    {keynotes.generalThemes}
-                  </p>
-                )}
-                {keynotes.keyLocalSymptoms && (
-                  <p>
-                    <span className="font-semibold">Key local:</span>{' '}
-                    {keynotes.keyLocalSymptoms}
-                  </p>
-                )}
-                {(keynotes.worseFrom || keynotes.betterFrom) && (
-                  <p>
-                    <span className="font-semibold">Modalities:</span>{' '}
-                    {keynotes.worseFrom && <>Worse: {keynotes.worseFrom}. </>}
-                    {keynotes.betterFrom && <>Better: {keynotes.betterFrom}.</>}
-                  </p>
-                )}
-              </div>
-            );
-          })()}
-        </div>
-      )}
-
-      {/* Client information + search */}
+      {/* Client information */}
       <div className="p-6 bg-slate-800/50 rounded-lg shadow-xl animate-fade-in">
         <h2 className="text-xl font-semibold text-cyan-300 mb-4">
           Client &amp; Remedy Selection
@@ -307,10 +209,76 @@ export const RemedySelectionForm: React.FC<RemedySelectionFormProps> = ({
         </div>
       </div>
 
+      {/* Permanent Keynotes Panel (formerly AI area) */}
+      <div className="p-6 bg-slate-800/50 rounded-lg shadow-xl animate-fade-in">
+        <h2 className="text-xl font-semibold text-cyan-300 mb-4">
+          Remedy Keynotes
+        </h2>
+        {focusedRemedy ? (
+          <div className="space-y-2 text-sm text-slate-200">
+            <h3 className="text-lg font-semibold text-cyan-200">
+              {focusedRemedy.name}{' '}
+              <span className="text-slate-400 text-sm">
+                ({focusedRemedy.abbreviation})
+              </span>
+            </h3>
+            {focusedKeynotes ? (
+              <>
+                {focusedKeynotes.mentalEmotionalThemes && (
+                  <p>
+                    <span className="font-semibold">Mental / Emotional:</span>{' '}
+                    {focusedKeynotes.mentalEmotionalThemes}
+                  </p>
+                )}
+                {focusedKeynotes.generalThemes && (
+                  <p>
+                    <span className="font-semibold">General:</span>{' '}
+                    {focusedKeynotes.generalThemes}
+                  </p>
+                )}
+                {focusedKeynotes.keyLocalSymptoms && (
+                  <p>
+                    <span className="font-semibold">Key local symptoms:</span>{' '}
+                    {focusedKeynotes.keyLocalSymptoms}
+                  </p>
+                )}
+                {focusedKeynotes.worseFrom && (
+                  <p>
+                    <span className="font-semibold">Worse from:</span>{' '}
+                    {focusedKeynotes.worseFrom}
+                  </p>
+                )}
+                {focusedKeynotes.betterFrom && (
+                  <p>
+                    <span className="font-semibold">Better from:</span>{' '}
+                    {focusedKeynotes.betterFrom}
+                  </p>
+                )}
+                {focusedKeynotes.notesSphere && (
+                  <p>
+                    <span className="font-semibold">Sphere / notes:</span>{' '}
+                    {focusedKeynotes.notesSphere}
+                  </p>
+                )}
+              </>
+            ) : (
+              <p className="text-slate-300">
+                No keynotes available for this remedy in the sheet.
+              </p>
+            )}
+          </div>
+        ) : (
+          <p className="text-sm text-slate-300">
+            Hover over or click on a remedy in the list below to view its
+            keynotes here.
+          </p>
+        )}
+      </div>
+
       {/* Remedy table */}
       <div className="bg-slate-800/50 rounded-lg shadow-xl overflow-hidden animate-fade-in-delay">
         <div className="overflow-x-auto">
-          <div className="h-[60vh] overflow-y-auto">
+          <div className="h-[50vh] overflow-y-auto">
             <table className="min-w-full divide-y divide-slate-700">
               <thead className="bg-slate-800 sticky top-0 z-10">
                 <tr>
@@ -356,7 +324,7 @@ export const RemedySelectionForm: React.FC<RemedySelectionFormProps> = ({
               <tbody className="bg-slate-800 divide-y divide-slate-700">
                 {sortedAndFilteredRemedies.map((remedy) => {
                   const isSelected = !!selections[remedy.srNo];
-                  const isFocused = selectedRemedy?.srNo === remedy.srNo;
+                  const isFocused = focusedRemedy?.srNo === remedy.srNo;
 
                   const rowClasses = [
                     'transition-all group cursor-pointer',
@@ -370,9 +338,8 @@ export const RemedySelectionForm: React.FC<RemedySelectionFormProps> = ({
                     <tr
                       key={remedy.srNo}
                       className={rowClasses}
-                      onMouseEnter={(e) => handleRowMouseEnter(remedy, e)}
-                      onMouseLeave={handleRowMouseLeave}
-                      onClick={() => setSelectedRemedy(remedy)}
+                      onMouseEnter={() => setFocusedRemedy(remedy)}
+                      onClick={() => setFocusedRemedy(remedy)}
                     >
                       <td className="px-6 py-4 whitespace-nowrap">
                         <div className="flex items-center gap-2">
@@ -416,75 +383,6 @@ export const RemedySelectionForm: React.FC<RemedySelectionFormProps> = ({
               </tbody>
             </table>
           </div>
-
-          {/* Selected remedy keynote panel */}
-          {selectedRemedy && (
-            <div className="border-t border-slate-700 p-4 bg-slate-900/80">
-              {(() => {
-                const keynotes = REMEDY_KEYNOTES[selectedRemedy.abbreviation];
-                return (
-                  <>
-                    <h3 className="text-lg font-semibold text-cyan-300 mb-2">
-                      {selectedRemedy.name}{' '}
-                      <span className="text-slate-400 text-sm">
-                        ({selectedRemedy.abbreviation})
-                      </span>
-                    </h3>
-                    {keynotes ? (
-                      <div className="space-y-2 text-sm text-slate-200">
-                        {keynotes.mentalEmotionalThemes && (
-                          <p>
-                            <span className="font-semibold">
-                              Mental / Emotional:
-                            </span>{' '}
-                            {keynotes.mentalEmotionalThemes}
-                          </p>
-                        )}
-                        {keynotes.generalThemes && (
-                          <p>
-                            <span className="font-semibold">General:</span>{' '}
-                            {keynotes.generalThemes}
-                          </p>
-                        )}
-                        {keynotes.keyLocalSymptoms && (
-                          <p>
-                            <span className="font-semibold">
-                              Key local symptoms:
-                            </span>{' '}
-                            {keynotes.keyLocalSymptoms}
-                          </p>
-                        )}
-                        {keynotes.worseFrom && (
-                          <p>
-                            <span className="font-semibold">Worse from:</span>{' '}
-                            {keynotes.worseFrom}
-                          </p>
-                        )}
-                        {keynotes.betterFrom && (
-                          <p>
-                            <span className="font-semibold">Better from:</span>{' '}
-                            {keynotes.betterFrom}
-                          </p>
-                        )}
-                        {keynotes.notesSphere && (
-                          <p>
-                            <span className="font-semibold">
-                              Sphere / notes:
-                            </span>{' '}
-                            {keynotes.notesSphere}
-                          </p>
-                        )}
-                      </div>
-                    ) : (
-                      <p className="text-sm text-slate-300">
-                        No keynote data found for this remedy.
-                      </p>
-                    )}
-                  </>
-                );
-              })()}
-            </div>
-          )}
         </div>
       </div>
 
