@@ -110,7 +110,7 @@ const App: React.FC = () => {
             />
         </div>
       </header>
-<main className="p-4 md:p-8">
+      <main className="p-4 md:p-8">
         {view === AppView.Selection ? (
           <RemedySelectionForm
             remedies={remedies}

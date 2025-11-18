@@ -17,6 +17,7 @@ const App: React.FC = () => {
   const [view, setView] = useState<AppView>(AppView.Selection);
   const [patientName, setPatientName] = useState<string>('');
   const [selections, setSelections] = useState<ClientSelections>({});
+  
   const [remedies, setRemedies] = useState<Remedy[]>(() => {
     try {
       const storedRemedies = window.localStorage.getItem(LOCAL_STORAGE_KEY);
@@ -73,9 +74,15 @@ const App: React.FC = () => {
   };
 
   const handleNewClient = () => {
-    setPatientName('');
-    setSelections({});
-    setView(AppView.Selection);
+    if (window.confirm("Start a new client? This will clear the current selection.")) {
+        setPatientName('');
+        setSelections({});
+        setView(AppView.Selection);
+    }
+  };
+
+  const handleEditSelection = () => {
+      setView(AppView.Selection);
   };
 
   const selectedRemedies: SelectedRemedy[] = useMemo(() => {
@@ -161,7 +168,8 @@ const App: React.FC = () => {
           <ClientPrescription
             patientName={patientName}
             selectedRemedies={selectedRemedies}
-            onBack={handleNewClient}
+            onNewClient={handleNewClient}
+            onEditSelection={handleEditSelection}
           />
         )}
       </main>

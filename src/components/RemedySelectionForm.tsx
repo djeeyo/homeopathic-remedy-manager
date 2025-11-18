@@ -89,12 +89,15 @@ export const RemedySelectionForm: React.FC<RemedySelectionFormProps> = ({
     try {
       const suggestedAbbrs = await getAiSuggestions(symptoms, remedies);
       
-      const abbrToSrNoMap = new Map(remedies.map(r => [r.abbreviation, r.srNo]));
+      const abbrToSrNoMap = new Map<string, string>(remedies.map(r => [r.abbreviation, r.srNo]));
       
       const suggestedSrNos = new Set<string>();
-      suggestedAbbrs.forEach(abbr => {
-        if (abbrToSrNoMap.has(abbr)) {
-          suggestedSrNos.add(abbrToSrNoMap.get(abbr)!);
+      suggestedAbbrs.forEach((abbr) => {
+        if (typeof abbr === 'string' && abbrToSrNoMap.has(abbr)) {
+          const srNo = abbrToSrNoMap.get(abbr);
+          if (srNo) {
+            suggestedSrNos.add(srNo);
+          }
         }
       });
       setAiSuggestions(suggestedSrNos);
@@ -165,10 +168,16 @@ export const RemedySelectionForm: React.FC<RemedySelectionFormProps> = ({
     }, 300); // 300ms delay before showing
   };
 
-  const handleRowMouseLeave = () => {
+  const handleRowMouseLeave = (event: React.MouseEvent) => {
     if (hoverTimeoutRef.current) {
         clearTimeout(hoverTimeoutRef.current);
     }
+    
+    // Check if the mouse is moving to a child element. This prevents the tooltip from hiding when moving between cells.
+    if (event.currentTarget.contains(event.relatedTarget as Node)) {
+        return;
+    }
+
     setActiveTooltip(null);
   };
 
@@ -389,3 +398,4 @@ export const RemedySelectionForm: React.FC<RemedySelectionFormProps> = ({
     </div>
   );
 };
+    
