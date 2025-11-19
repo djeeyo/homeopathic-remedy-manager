@@ -4,7 +4,7 @@ import type { SelectedRemedy } from '../types';
 interface ClientPrescriptionProps {
   patientName: string;
   selectedRemedies: SelectedRemedy[];
-  onBack: () => void;
+  onBack: () => void;   // ✅ important
 }
 
 export const ClientPrescription: React.FC<ClientPrescriptionProps> = ({
@@ -32,9 +32,7 @@ export const ClientPrescription: React.FC<ClientPrescriptionProps> = ({
 
       {/* Client info */}
       <div className="p-6 bg-slate-800/60 rounded-lg shadow">
-        <h3 className="text-lg font-semibold text-slate-100 mb-2">
-          Patient
-        </h3>
+        <h3 className="text-lg font-semibold text-slate-100 mb-2">Patient</h3>
         <p className="text-slate-200">
           <span className="font-medium">Name:&nbsp;</span>
           {patientName || '—'}
@@ -82,8 +80,8 @@ export const ClientPrescription: React.FC<ClientPrescriptionProps> = ({
                     </td>
                     <td className="px-6 py-4">
                       <div className="text-xs text-slate-400 italic">
-                        {/* Placeholder for future dosing / instructions */}
-                        Individual dosing instructions to be added by practitioner.
+                        Individual dosing instructions to be added by
+                        practitioner.
                       </div>
                     </td>
                   </tr>
@@ -99,7 +97,6 @@ export const ClientPrescription: React.FC<ClientPrescriptionProps> = ({
         </div>
       </div>
 
-      {/* Footer note */}
       <p className="text-xs text-slate-500 text-center">
         This prescription is a working document for professional use and does
         not replace individualized clinical judgment.
