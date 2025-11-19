@@ -1,7 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import type { Remedy, Potency, ClientSelections } from '../types';
 import { POTENCIES } from '../types';
-import { REMEDY_KEYNOTES } from '../constants/remedyKeynotes';
+import { REMEDY_KEYNOTES } from '../../constants/remedyKeynotes';
 
 // Define types for sorting
 type SortKey = 'name' | 'abbreviation';
