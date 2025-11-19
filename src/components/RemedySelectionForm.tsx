@@ -1,8 +1,7 @@
-
 import React, { useState, useMemo } from 'react';
 import type { Remedy, Potency, ClientSelections } from '../types';
 import { POTENCIES } from '../types';
-import { getRemedyInfo } from './AISuggestionEngine';
+import { REMEDY_KEYNOTES } from '../constants/remedyKeynotes';
 
 // Define types for sorting
 type SortKey = 'name' | 'abbreviation';
@@ -21,35 +20,80 @@ interface RemedySelectionFormProps {
 }
 
 const SearchIcon: React.FC<React.SVGProps<SVGSVGElement>> = (props) => (
-  <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" {...props}>
-    <path strokeLinecap="round" strokeLinejoin="round" d="m21 21-5.197-5.197m0 0A7.5 7.5 0 1 0 5.196 5.196a7.5 7.5 0 0 0 10.607 10.607Z" />
+  <svg
+    xmlns="http://www.w3.org/2000/svg"
+    fill="none"
+    viewBox="0 0 24 24"
+    strokeWidth={1.5}
+    stroke="currentColor"
+    {...props}
+  >
+    <path
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      d="m21 21-5.197-5.197m0 0A7.5 7.5 0 1 0 5.196 5.196a7.5 7.5 0 0 0 10.607 10.607Z"
+    />
   </svg>
 );
 
-const BookOpenIcon: React.FC<React.SVGProps<SVGSVGElement>> = (props) => (
-  <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" {...props}>
-    <path strokeLinecap="round" strokeLinejoin="round" d="M12 6.042A8.967 8.967 0 0 0 6 3.75c-1.052 0-2.062.18-3 .512v14.25A8.987 8.987 0 0 1 6 18c2.305 0 4.408.867 6 2.292m0-14.25a8.966 8.966 0 0 1 6-2.292c1.052 0 2.062.18 3 .512v14.25A8.987 8.987 0 0 0 18 18a8.967 8.967 0 0 0-6 2.292m0-14.25v14.25" />
+const InformationCircleIcon: React.FC<React.SVGProps<SVGSVGElement>> = (
+  props,
+) => (
+  <svg
+    xmlns="http://www.w3.org/2000/svg"
+    fill="none"
+    viewBox="0 0 24 24"
+    strokeWidth={1.5}
+    stroke="currentColor"
+    {...props}
+  >
+    <path
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      d="m11.25 11.25.041-.02a.75.75 0 0 1 1.063.852l-.708 2.836a.75.75 0 0 0 1.063.853l.041-.021M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Zm-9-3.75h.008v.008H12V8.25Z"
+    />
   </svg>
 );
 
-const SortIndicator: React.FC<{ active: boolean; direction: 'asc' | 'desc' }> = ({ active, direction }) => {
+const SortIndicator: React.FC<{ active: boolean; direction: 'asc' | 'desc' }> = ({
+  active,
+  direction,
+}) => {
   if (!active) {
     return (
-        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="h-4 w-4 ml-1 text-slate-500 opacity-0 group-hover:opacity-100 transition-opacity">
-            <path strokeLinecap="round" strokeLinejoin="round" d="M8.25 15 12 18.75 15.75 15m-7.5-6L12 5.25 15.75 9" />
-        </svg>
+      <svg
+        xmlns="http://www.w3.org/2000/svg"
+        fill="none"
+        viewBox="0 0 24 24"
+        strokeWidth={2}
+        stroke="currentColor"
+        className="h-4 w-4 ml-1 text-slate-500 opacity-0 group-hover:opacity-100 transition-opacity"
+      >
+        <path
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          d="M8.25 15 12 18.75 15.75 15m-7.5-6L12 5.25 15.75 9"
+        />
+      </svg>
     );
   }
-  const d = direction === 'asc'
-    ? "m19 9-7 7-7-7" // Down arrow (A-Z)
-    : "m5 15 7-7 7 7";  // Up arrow (Z-A)
+  const d =
+    direction === 'asc'
+      ? 'm19 9-7 7-7-7'
+      : 'm5 15 7-7 7 7';
   return (
-    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={3} stroke="currentColor" className="h-3 w-3 ml-1 text-cyan-400">
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      fill="none"
+      viewBox="0 0 24 24"
+      strokeWidth={3}
+      stroke="currentColor"
+      className="h-3 w-3 ml-1 text-cyan-400"
+    >
       <path strokeLinecap="round" strokeLinejoin="round" d={d} />
     </svg>
   );
 };
-
 
 export const RemedySelectionForm: React.FC<RemedySelectionFormProps> = ({
   remedies,
@@ -60,33 +104,21 @@ export const RemedySelectionForm: React.FC<RemedySelectionFormProps> = ({
   onGenerate,
 }) => {
   const [searchTerm, setSearchTerm] = useState('');
-  const [sortConfig, setSortConfig] = useState<SortConfig>({ key: 'name', direction: 'asc' });
-  
-  // Keynote/Info State
-  const [viewingRemedy, setViewingRemedy] = useState<Remedy | null>(null);
-  const [remedyInfoCache, setRemedyInfoCache] = useState<Record<string, { data?: string; error?: string }>>({});
-  const [isLoadingInfo, setIsLoadingInfo] = useState(false);
+  const [sortConfig, setSortConfig] = useState<SortConfig>({
+    key: 'name',
+    direction: 'asc',
+  });
 
-  const handleViewRemedyInfo = async (remedy: Remedy) => {
-    setViewingRemedy(remedy);
-    
-    // Use cache if available
-    if (remedyInfoCache[remedy.srNo]) return;
+  // Hovered remedy (for preview)
+  const [hoveredRemedy, setHoveredRemedy] = useState<Remedy | null>(null);
+  // Clicked remedy (locks the panel so it doesn't "disappear")
+  const [selectedRemedy, setSelectedRemedy] = useState<Remedy | null>(null);
 
-    setIsLoadingInfo(true);
-    try {
-        const info = await getRemedyInfo(remedy.name);
-        setRemedyInfoCache(prev => ({ ...prev, [remedy.srNo]: { data: info } }));
-    } catch (err) {
-        const msg = err instanceof Error ? err.message : "Failed to load info";
-        setRemedyInfoCache(prev => ({ ...prev, [remedy.srNo]: { error: msg } }));
-    } finally {
-        setIsLoadingInfo(false);
-    }
-  };
+  // Remedy currently displayed in the keynotes panel
+  const displayedRemedy = hoveredRemedy || selectedRemedy;
 
   const handleSelectionChange = (srNo: string, potency: Potency) => {
-    setSelections(prev => {
+    setSelections((prev) => {
       const newSelections = { ...prev };
       const currentPotencies = new Set(newSelections[srNo]);
 
@@ -104,7 +136,7 @@ export const RemedySelectionForm: React.FC<RemedySelectionFormProps> = ({
       return newSelections;
     });
   };
-  
+
   const requestSort = (key: SortKey) => {
     let direction: 'asc' | 'desc' = 'asc';
     if (sortConfig.key === key && sortConfig.direction === 'asc') {
@@ -116,30 +148,41 @@ export const RemedySelectionForm: React.FC<RemedySelectionFormProps> = ({
   const sortedAndFilteredRemedies = useMemo(() => {
     const lowercasedFilter = searchTerm.toLowerCase();
     const filtered = searchTerm
-        ? remedies.filter(remedy =>
+      ? remedies.filter(
+          (remedy) =>
             remedy.name.toLowerCase().includes(lowercasedFilter) ||
-            remedy.abbreviation.toLowerCase().includes(lowercasedFilter)
+            remedy.abbreviation.toLowerCase().includes(lowercasedFilter),
         )
-        : [...remedies];
+      : [...remedies];
 
     return filtered.sort((a, b) => {
-        const key = sortConfig.key;
-        const direction = sortConfig.direction === 'asc' ? 1 : -1;
-        // Using localeCompare for robust string sorting
-        return a[key].localeCompare(b[key]) * direction;
+      const key = sortConfig.key;
+      const direction = sortConfig.direction === 'asc' ? 1 : -1;
+      return a[key].localeCompare(b[key]) * direction;
     });
-}, [remedies, searchTerm, sortConfig]);
-  
+  }, [remedies, searchTerm, sortConfig]);
+
   const selectionCount = Object.keys(selections).length;
   const isFormValid = patientName.trim() !== '' && selectionCount > 0;
 
+  const displayedKeynotes =
+    displayedRemedy && REMEDY_KEYNOTES[displayedRemedy.abbreviation]
+      ? REMEDY_KEYNOTES[displayedRemedy.abbreviation]
+      : null;
+
   return (
     <div className="space-y-6">
+      {/* Client information */}
       <div className="p-6 bg-slate-800/50 rounded-lg shadow-xl">
-        <h2 className="text-xl font-semibold text-cyan-300 mb-4">Client & Remedy Selection</h2>
+        <h2 className="text-xl font-semibold text-cyan-300 mb-4">
+          Client &amp; Remedy Selection
+        </h2>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <div>
-            <label htmlFor="patientName" className="block text-sm font-medium text-slate-300 mb-1">
+            <label
+              htmlFor="patientName"
+              className="block text-sm font-medium text-slate-300 mb-1"
+            >
               Patient Name
             </label>
             <input
@@ -152,144 +195,234 @@ export const RemedySelectionForm: React.FC<RemedySelectionFormProps> = ({
             />
           </div>
           <div className="relative">
-            <label htmlFor="searchRemedy" className="block text-sm font-medium text-slate-300 mb-1">
+            <label
+              htmlFor="searchRemedy"
+              className="block text-sm font-medium text-slate-300 mb-1"
+            >
               Search Remedies
             </label>
-             <div className="relative">
-                <input
-                  id="searchRemedy"
-                  type="text"
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  placeholder="Filter by name or abbreviation..."
-                  className="w-full bg-slate-700 border border-slate-600 rounded-md shadow-sm py-2 pl-10 pr-3 text-white focus:outline-none focus:ring-2 focus:ring-cyan-500 transition"
-                />
-                <SearchIcon className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-400"/>
-             </div>
+            <div className="relative">
+              <input
+                id="searchRemedy"
+                type="text"
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                placeholder="Filter by name or abbreviation..."
+                className="w-full bg-slate-700 border border-slate-600 rounded-md shadow-sm py-2 pl-10 pr-3 text-white focus:outline-none focus:ring-2 focus:ring-cyan-500 transition"
+              />
+              <SearchIcon className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-400" />
+            </div>
           </div>
         </div>
       </div>
 
-      {/* Persistent Keynote Panel */}
-      <div className="p-6 bg-slate-800/50 rounded-lg shadow-xl transition-all">
-        <h2 className="text-xl font-semibold text-cyan-300 mb-3">Remedy Keynotes</h2>
-        <div className="bg-slate-900/50 rounded border border-slate-700 min-h-[120px] relative">
-            {viewingRemedy ? (
-                <div className="p-6">
-                    <div className="flex justify-between items-start border-b border-slate-700 pb-3 mb-4">
-                        <div>
-                            <h3 className="text-xl font-bold text-white">{viewingRemedy.name}</h3>
-                            <span className="text-cyan-400 font-mono text-sm">{viewingRemedy.abbreviation}</span>
-                        </div>
-                    </div>
-                    
-                    {isLoadingInfo ? (
-                         <div className="flex items-center justify-center py-4 text-slate-400">
-                             <svg className="animate-spin h-5 w-5 mr-3 text-cyan-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                             </svg>
-                             Loading Materia Medica...
-                         </div>
-                    ) : remedyInfoCache[viewingRemedy.srNo]?.data ? (
-                         <div className="remedy-tooltip-content text-slate-300 leading-relaxed" dangerouslySetInnerHTML={{ __html: remedyInfoCache[viewingRemedy.srNo].data! }} />
-                    ) : remedyInfoCache[viewingRemedy.srNo]?.error ? (
-                         <p className="text-red-400">Error: {remedyInfoCache[viewingRemedy.srNo].error}</p>
-                    ) : null}
-                </div>
+      {/* Remedy Keynotes panel (permanent) */}
+      <div className="p-6 bg-slate-800/50 rounded-lg shadow-xl">
+        <h2 className="text-xl font-semibold text-cyan-300 mb-4">
+          Remedy Keynotes
+        </h2>
+        {displayedRemedy ? (
+          <div className="space-y-2 text-sm text-slate-200">
+            <h3 className="text-lg font-semibold text-cyan-200">
+              {displayedRemedy.name}{' '}
+              <span className="text-slate-400 text-sm">
+                ({displayedRemedy.abbreviation})
+              </span>
+            </h3>
+
+            {displayedKeynotes ? (
+              <>
+                {displayedKeynotes.mentalEmotionalThemes && (
+                  <p>
+                    <span className="font-semibold">Mental / Emotional:</span>{' '}
+                    {displayedKeynotes.mentalEmotionalThemes}
+                  </p>
+                )}
+                {displayedKeynotes.generalThemes && (
+                  <p>
+                    <span className="font-semibold">General:</span>{' '}
+                    {displayedKeynotes.generalThemes}
+                  </p>
+                )}
+                {displayedKeynotes.keyLocalSymptoms && (
+                  <p>
+                    <span className="font-semibold">Key local symptoms:</span>{' '}
+                    {displayedKeynotes.keyLocalSymptoms}
+                  </p>
+                )}
+                {displayedKeynotes.worseFrom && (
+                  <p>
+                    <span className="font-semibold">Worse from:</span>{' '}
+                    {displayedKeynotes.worseFrom}
+                  </p>
+                )}
+                {displayedKeynotes.betterFrom && (
+                  <p>
+                    <span className="font-semibold">Better from:</span>{' '}
+                    {displayedKeynotes.betterFrom}
+                  </p>
+                )}
+                {displayedKeynotes.notesSphere && (
+                  <p>
+                    <span className="font-semibold">Sphere / notes:</span>{' '}
+                    {displayedKeynotes.notesSphere}
+                  </p>
+                )}
+              </>
             ) : (
-                <div className="absolute inset-0 flex flex-col items-center justify-center text-slate-500 p-4 text-center">
-                     <BookOpenIcon className="h-10 w-10 mb-2 opacity-30"/>
-                     <p>Click the book icon <span className="inline-block align-middle"><BookOpenIcon className="h-4 w-4"/></span> next to any remedy to view its keynotes here.</p>
-                </div>
+              <p className="text-slate-300">
+                No keynotes found for this remedy in your RemedyKeynotesSheet.
+              </p>
             )}
-        </div>
+
+            <p className="mt-3 text-xs text-slate-400">
+              Tip: hover a remedy to preview, click a remedy to keep its
+              keynotes visible while you move the mouse.
+            </p>
+          </div>
+        ) : (
+          <p className="text-sm text-slate-300">
+            Hover over or click on a remedy in the list below to view its
+            keynotes here.
+          </p>
+        )}
       </div>
 
+      {/* Remedy table */}
       <div className="bg-slate-800/50 rounded-lg shadow-xl overflow-hidden">
         <div className="overflow-x-auto">
-            <div className="h-[50vh] overflow-y-auto">
-                <table className="min-w-full divide-y divide-slate-700">
-                    <thead className="bg-slate-800 sticky top-0 z-10">
-                        <tr>
-                            <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-cyan-300 uppercase tracking-wider">
-                                <button onClick={() => requestSort('name')} className="flex items-center group focus:outline-none">
-                                    Name
-                                    <SortIndicator active={sortConfig.key === 'name'} direction={sortConfig.direction} />
-                                </button>
-                            </th>
-                            <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-cyan-300 uppercase tracking-wider">
-                                <button onClick={() => requestSort('abbreviation')} className="flex items-center group focus:outline-none">
-                                    Abbreviation
-                                    <SortIndicator active={sortConfig.key === 'abbreviation'} direction={sortConfig.direction} />
-                                </button>
-                            </th>
-                            <th scope="col" colSpan={3} className="px-6 py-3 text-center text-xs font-medium text-cyan-300 uppercase tracking-wider">Potency</th>
-                        </tr>
-                    </thead>
-                    <tbody className="bg-slate-800 divide-y divide-slate-700">
-                        {sortedAndFilteredRemedies.map((remedy) => {
-                          const isSelected = !!selections[remedy.srNo];
-                          const isViewing = viewingRemedy?.srNo === remedy.srNo;
-                          
-                          const rowClasses = [
-                            'transition-all group',
-                            isSelected ? 'bg-cyan-900/30' : 'hover:bg-slate-700/50',
-                            isViewing ? 'bg-slate-700' : ''
-                          ].filter(Boolean).join(' ');
+          <div className="h-[50vh] overflow-y-auto">
+            <table className="min-w-full divide-y divide-slate-700">
+              <thead className="bg-slate-800 sticky top-0 z-10">
+                <tr>
+                  <th
+                    scope="col"
+                    className="px-6 py-3 text-left text-xs font-medium text-cyan-300 uppercase tracking-wider"
+                  >
+                    <button
+                      onClick={() => requestSort('name')}
+                      className="flex items-center group focus:outline-none"
+                    >
+                      Name
+                      <SortIndicator
+                        active={sortConfig.key === 'name'}
+                        direction={sortConfig.direction}
+                      />
+                    </button>
+                  </th>
+                  <th
+                    scope="col"
+                    className="px-6 py-3 text-left text-xs font-medium text-cyan-300 uppercase tracking-wider"
+                  >
+                    <button
+                      onClick={() => requestSort('abbreviation')}
+                      className="flex items-center group focus:outline-none"
+                    >
+                      Abbreviation
+                      <SortIndicator
+                        active={sortConfig.key === 'abbreviation'}
+                        direction={sortConfig.direction}
+                      />
+                    </button>
+                  </th>
+                  <th
+                    scope="col"
+                    colSpan={3}
+                    className="px-6 py-3 text-center text-xs font-medium text-cyan-300 uppercase tracking-wider"
+                  >
+                    Potency
+                  </th>
+                </tr>
+              </thead>
+              <tbody className="bg-slate-800 divide-y divide-slate-700">
+                {sortedAndFilteredRemedies.map((remedy) => {
+                  const isSelected = selectedRemedy?.srNo === remedy.srNo;
+                  const isDisplayed = displayedRemedy?.srNo === remedy.srNo;
 
-                          return (
-                            <tr key={remedy.srNo} className={rowClasses}>
-                                <td className="px-6 py-4 whitespace-nowrap">
-                                    <div className="flex items-center gap-3">
-                                        <button 
-                                            onClick={() => handleViewRemedyInfo(remedy)}
-                                            className={`p-1 rounded-full transition-colors ${isViewing ? 'text-cyan-400 bg-slate-600' : 'text-slate-500 hover:text-cyan-400 hover:bg-slate-600'}`}
-                                            title="Read Keynotes"
-                                        >
-                                            <BookOpenIcon className="h-5 w-5" />
-                                        </button>
-                                        <span className={`text-sm font-medium ${isViewing ? 'text-white' : 'text-slate-200'}`}>{remedy.name}</span>
-                                    </div>
-                                </td>
-                                <td className="px-6 py-4 whitespace-nowrap">
-                                    <div className="text-sm text-slate-400">{remedy.abbreviation}</div>
-                                </td>
-                                {POTENCIES.map(potency => (
-                                    <td key={potency} className="px-6 py-4 whitespace-nowrap text-center">
-                                        <label className="flex items-center justify-center space-x-2 cursor-pointer">
-                                            <input
-                                                type="checkbox"
-                                                checked={selections[remedy.srNo]?.has(potency) || false}
-                                                onChange={() => handleSelectionChange(remedy.srNo, potency)}
-                                                className="h-5 w-5 rounded bg-slate-700 border-slate-500 text-cyan-500 focus:ring-cyan-600 cursor-pointer"
-                                            />
-                                            <span className="text-sm text-slate-300">{potency}</span>
-                                        </label>
-                                    </td>
-                                ))}
-                            </tr>
-                          );
-                        })}
-                    </tbody>
-                </table>
-            </div>
+                  const rowClasses = [
+                    'transition-all group cursor-pointer',
+                    isSelected
+                      ? 'bg-cyan-900/40'
+                      : isDisplayed
+                      ? 'bg-cyan-900/20'
+                      : 'hover:bg-slate-700/50',
+                    isDisplayed ? 'outline outline-2 outline-cyan-400/70' : '',
+                  ]
+                    .filter(Boolean)
+                    .join(' ');
+
+                  return (
+                    <tr
+                      key={remedy.srNo}
+                      className={rowClasses}
+                      onMouseEnter={() => setHoveredRemedy(remedy)}
+                      onMouseLeave={() =>
+                        setHoveredRemedy((current) =>
+                          current?.srNo === remedy.srNo ? null : current,
+                        )
+                      }
+                      onClick={() => setSelectedRemedy(remedy)}
+                    >
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <div className="flex items-center gap-2">
+                          <span className="text-sm font-medium text-slate-200">
+                            {remedy.name}
+                          </span>
+                          <InformationCircleIcon className="h-4 w-4 text-slate-600 group-hover:text-slate-400 transition-colors" />
+                        </div>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <div className="text-sm text-slate-400">
+                          {remedy.abbreviation}
+                        </div>
+                      </td>
+                      {POTENCIES.map((potency) => (
+                        <td
+                          key={potency}
+                          className="px-6 py-4 whitespace-nowrap text-center"
+                        >
+                          <label className="flex items-center justify-center space-x-2 cursor-pointer">
+                            <input
+                              type="checkbox"
+                              checked={
+                                selections[remedy.srNo]?.has(potency) || false
+                              }
+                              onChange={(e) => {
+                                e.stopPropagation();
+                                handleSelectionChange(remedy.srNo, potency);
+                              }}
+                              className="h-5 w-5 rounded bg-slate-700 border-slate-500 text-cyan-500 focus:ring-cyan-600 cursor-pointer"
+                            />
+                            <span className="text-sm text-slate-300">
+                              {potency}
+                            </span>
+                          </label>
+                        </td>
+                      ))}
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
         </div>
       </div>
-      
+
+      {/* Bottom bar */}
       <div className="sticky bottom-0 left-0 right-0 p-4 bg-slate-900/80 backdrop-blur-sm border-t border-slate-700 flex items-center justify-center md:justify-end">
-         <div className="flex items-center gap-4">
-            <span className="text-slate-300">
-                {selectionCount} {selectionCount === 1 ? 'remedy' : 'remedies'} selected
-            </span>
-            <button
-              onClick={onGenerate}
-              disabled={!isFormValid}
-              className="px-6 py-2 border border-transparent text-base font-medium rounded-md text-white bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-600 hover:to-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-cyan-500 focus:ring-offset-slate-900 disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-lg hover:shadow-cyan-500/30"
-            >
-              Generate Prescription
-            </button>
-         </div>
+        <div className="flex items-center gap-4">
+          <span className="text-slate-300">
+            {selectionCount} {selectionCount === 1 ? 'remedy' : 'remedies'}{' '}
+            selected
+          </span>
+          <button
+            onClick={onGenerate}
+            disabled={!isFormValid}
+            className="px-6 py-2 border border-transparent text-base font-medium rounded-md text-white bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-600 hover:to-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-cyan-500 focus:ring-offset-slate-900 disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-lg hover:shadow-cyan-500/30"
+          >
+            Generate Prescription
+          </button>
+        </div>
       </div>
     </div>
   );
