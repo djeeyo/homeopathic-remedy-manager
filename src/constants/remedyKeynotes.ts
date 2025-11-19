@@ -38,7 +38,8 @@ export const REMEDY_KEYNOTES: Record<string, RemedyKeynotes> = {
       'Useful in states of neurasthenia and exhaustion from long-continued brain work.',
   },
 
-  // Add the rest of your remedies here, using the abbreviation as the key…
-  // 'ACON': { ... },
-  // 'ARN': { ... },
+  // Add the rest of your remedies later using their abbreviations:
+  // 'ABIES-C': { ... },
+  // 'ABIES-N': { ... },
+  // 'ABROT': { ... },
 };
