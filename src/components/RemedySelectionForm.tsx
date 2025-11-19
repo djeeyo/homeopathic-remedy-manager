@@ -36,7 +36,9 @@ const SearchIcon: React.FC<React.SVGProps<SVGSVGElement>> = (props) => (
   </svg>
 );
 
-const InformationCircleIcon: React.FC<React.SVGProps<SVGSVGElement>> = (props) => (
+const InformationCircleIcon: React.FC<React.SVGProps<SVGSVGElement>> = (
+  props,
+) => (
   <svg
     xmlns="http://www.w3.org/2000/svg"
     fill="none"
@@ -107,7 +109,7 @@ export const RemedySelectionForm: React.FC<RemedySelectionFormProps> = ({
     direction: 'asc',
   });
 
-  // Which remedy is currently in focus for the keynote panel
+  // Remedy whose keynotes we’re showing in the middle panel
   const [focusedRemedy, setFocusedRemedy] = useState<Remedy | null>(null);
 
   const handleSelectionChange = (srNo: string, potency: Potency) => {
@@ -144,7 +146,7 @@ export const RemedySelectionForm: React.FC<RemedySelectionFormProps> = ({
       ? remedies.filter(
           (remedy) =>
             remedy.name.toLowerCase().includes(lowercasedFilter) ||
-            remedy.abbreviation.toLowerCase().includes(lowercasedFilter)
+            remedy.abbreviation.toLowerCase().includes(lowercasedFilter),
         )
       : [...remedies];
 
@@ -158,7 +160,6 @@ export const RemedySelectionForm: React.FC<RemedySelectionFormProps> = ({
   const selectionCount = Object.keys(selections).length;
   const isFormValid = patientName.trim() !== '' && selectionCount > 0;
 
-  // Precompute keynote data for the focused remedy
   const focusedKeynotes = focusedRemedy
     ? REMEDY_KEYNOTES[focusedRemedy.abbreviation]
     : null;
@@ -166,7 +167,7 @@ export const RemedySelectionForm: React.FC<RemedySelectionFormProps> = ({
   return (
     <div className="space-y-6">
       {/* Client information */}
-      <div className="p-6 bg-slate-800/50 rounded-lg shadow-xl animate-fade-in">
+      <div className="p-6 bg-slate-800/50 rounded-lg shadow-xl">
         <h2 className="text-xl font-semibold text-cyan-300 mb-4">
           Client &amp; Remedy Selection
         </h2>
@@ -209,8 +210,8 @@ export const RemedySelectionForm: React.FC<RemedySelectionFormProps> = ({
         </div>
       </div>
 
-      {/* Permanent Keynotes Panel (formerly AI area) */}
-      <div className="p-6 bg-slate-800/50 rounded-lg shadow-xl animate-fade-in">
+      {/* Permanent Keynotes panel (re-using the AI area) */}
+            <div className="p-6 bg-slate-800/50 rounded-lg shadow-xl">
         <h2 className="text-xl font-semibold text-cyan-300 mb-4">
           Remedy Keynotes
         </h2>
@@ -222,61 +223,23 @@ export const RemedySelectionForm: React.FC<RemedySelectionFormProps> = ({
                 ({focusedRemedy.abbreviation})
               </span>
             </h3>
-            {focusedKeynotes ? (
-              <>
-                {focusedKeynotes.mentalEmotionalThemes && (
-                  <p>
-                    <span className="font-semibold">Mental / Emotional:</span>{' '}
-                    {focusedKeynotes.mentalEmotionalThemes}
-                  </p>
-                )}
-                {focusedKeynotes.generalThemes && (
-                  <p>
-                    <span className="font-semibold">General:</span>{' '}
-                    {focusedKeynotes.generalThemes}
-                  </p>
-                )}
-                {focusedKeynotes.keyLocalSymptoms && (
-                  <p>
-                    <span className="font-semibold">Key local symptoms:</span>{' '}
-                    {focusedKeynotes.keyLocalSymptoms}
-                  </p>
-                )}
-                {focusedKeynotes.worseFrom && (
-                  <p>
-                    <span className="font-semibold">Worse from:</span>{' '}
-                    {focusedKeynotes.worseFrom}
-                  </p>
-                )}
-                {focusedKeynotes.betterFrom && (
-                  <p>
-                    <span className="font-semibold">Better from:</span>{' '}
-                    {focusedKeynotes.betterFrom}
-                  </p>
-                )}
-                {focusedKeynotes.notesSphere && (
-                  <p>
-                    <span className="font-semibold">Sphere / notes:</span>{' '}
-                    {focusedKeynotes.notesSphere}
-                  </p>
-                )}
-              </>
-            ) : (
-              <p className="text-slate-300">
-                No keynotes available for this remedy in the sheet.
-              </p>
-            )}
+            <p className="text-slate-300">
+              Keynote text will appear here once we hook up your
+              <code className="ml-1 text-xs bg-slate-700 px-1 py-0.5 rounded">
+                REMEDY_KEYNOTES
+              </code>
+              .
+            </p>
           </div>
         ) : (
           <p className="text-sm text-slate-300">
-            Hover over or click on a remedy in the list below to view its
-            keynotes here.
+            Hover over or click on a remedy in the list below to view it here.
           </p>
         )}
       </div>
 
       {/* Remedy table */}
-      <div className="bg-slate-800/50 rounded-lg shadow-xl overflow-hidden animate-fade-in-delay">
+      <div className="bg-slate-800/50 rounded-lg shadow-xl overflow-hidden">
         <div className="overflow-x-auto">
           <div className="h-[50vh] overflow-y-auto">
             <table className="min-w-full divide-y divide-slate-700">
@@ -338,6 +301,7 @@ export const RemedySelectionForm: React.FC<RemedySelectionFormProps> = ({
                     <tr
                       key={remedy.srNo}
                       className={rowClasses}
+                      // Hover OR click both focus the remedy
                       onMouseEnter={() => setFocusedRemedy(remedy)}
                       onClick={() => setFocusedRemedy(remedy)}
                     >
