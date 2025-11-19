@@ -17,6 +17,7 @@ const App: React.FC = () => {
   const [view, setView] = useState<AppView>(AppView.Selection);
   const [patientName, setPatientName] = useState<string>('');
   const [selections, setSelections] = useState<ClientSelections>({});
+  
   const [remedies, setRemedies] = useState<Remedy[]>(() => {
     try {
       const storedRemedies = window.localStorage.getItem(LOCAL_STORAGE_KEY);
@@ -73,9 +74,15 @@ const App: React.FC = () => {
   };
 
   const handleNewClient = () => {
-    setPatientName('');
-    setSelections({});
-    setView(AppView.Selection);
+    if (window.confirm("Start a new client? This will clear the current selection.")) {
+        setPatientName('');
+        setSelections({});
+        setView(AppView.Selection);
+    }
+  };
+
+  const handleEditSelection = () => {
+      setView(AppView.Selection);
   };
 
   const selectedRemedies: SelectedRemedy[] = useMemo(() => {
@@ -98,6 +105,26 @@ const App: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-slate-900 text-slate-100 font-sans">
+      <style>{`
+        .remedy-tooltip-content h3 {
+            font-size: 1.125rem; /* text-lg */
+            font-weight: 600; /* font-semibold */
+            color: #93c5fd; /* text-blue-300 */
+            margin-bottom: 0.5rem; /* mb-2 */
+        }
+        .remedy-tooltip-content ul {
+            list-style-type: disc;
+            padding-left: 1.25rem; /* pl-5 */
+            margin: 0;
+            font-size: 0.875rem; /* text-sm */
+        }
+        .remedy-tooltip-content li {
+            margin-bottom: 0.25rem; /* mb-1 */
+        }
+         .remedy-tooltip-content strong {
+            color: #67e8f9; /* text-cyan-300 */
+        }
+      `}</style>
       <header className="bg-gradient-to-r from-cyan-500 to-blue-600 p-4 shadow-lg text-center">
          <div className="container mx-auto flex justify-between items-center">
             <h1 className="text-xl md:text-3xl font-bold tracking-tight text-white text-left flex-1">
@@ -124,7 +151,8 @@ const App: React.FC = () => {
           <ClientPrescription
             patientName={patientName}
             selectedRemedies={selectedRemedies}
-            onBack={handleNewClient}
+            onNewClient={handleNewClient}
+            onEditSelection={handleEditSelection}
           />
         )}
       </main>

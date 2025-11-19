@@ -1,4 +1,3 @@
-
 import React from 'react';
 import type { SelectedRemedy } from '../types';
 
@@ -72,7 +71,7 @@ export const ClientPrescription: React.FC<ClientPrescriptionProps> = ({
   };
   
   return (
-    <div className="max-w-4xl mx-auto animate-fade-in">
+    <div className="max-w-4xl mx-auto">
         <div className="flex justify-between items-center mb-6 print:hidden flex-wrap gap-4">
             <div className="flex items-center gap-2">
                  <button
