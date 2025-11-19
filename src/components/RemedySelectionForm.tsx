@@ -109,8 +109,13 @@ export const RemedySelectionForm: React.FC<RemedySelectionFormProps> = ({
     direction: 'asc',
   });
 
-  // Remedy whose keynotes we’re showing in the middle panel
-  const [focusedRemedy, setFocusedRemedy] = useState<Remedy | null>(null);
+  // Hovered remedy (for preview)
+  const [hoveredRemedy, setHoveredRemedy] = useState<Remedy | null>(null);
+  // Clicked remedy (locks the panel so it doesn't "disappear")
+  const [selectedRemedy, setSelectedRemedy] = useState<Remedy | null>(null);
+
+  // Remedy currently displayed in the keynotes panel
+  const displayedRemedy = hoveredRemedy || selectedRemedy;
 
   const handleSelectionChange = (srNo: string, potency: Potency) => {
     setSelections((prev) => {
@@ -160,9 +165,10 @@ export const RemedySelectionForm: React.FC<RemedySelectionFormProps> = ({
   const selectionCount = Object.keys(selections).length;
   const isFormValid = patientName.trim() !== '' && selectionCount > 0;
 
-  const focusedKeynotes = focusedRemedy
-    ? REMEDY_KEYNOTES[focusedRemedy.abbreviation]
-    : null;
+  const displayedKeynotes =
+    displayedRemedy && REMEDY_KEYNOTES[displayedRemedy.abbreviation]
+      ? REMEDY_KEYNOTES[displayedRemedy.abbreviation]
+      : null;
 
   return (
     <div className="space-y-6">
@@ -210,30 +216,74 @@ export const RemedySelectionForm: React.FC<RemedySelectionFormProps> = ({
         </div>
       </div>
 
-      {/* Permanent Keynotes panel (re-using the AI area) */}
-            <div className="p-6 bg-slate-800/50 rounded-lg shadow-xl">
+      {/* Remedy Keynotes panel (permanent) */}
+      <div className="p-6 bg-slate-800/50 rounded-lg shadow-xl">
         <h2 className="text-xl font-semibold text-cyan-300 mb-4">
           Remedy Keynotes
         </h2>
-        {focusedRemedy ? (
+        {displayedRemedy ? (
           <div className="space-y-2 text-sm text-slate-200">
             <h3 className="text-lg font-semibold text-cyan-200">
-              {focusedRemedy.name}{' '}
+              {displayedRemedy.name}{' '}
               <span className="text-slate-400 text-sm">
-                ({focusedRemedy.abbreviation})
+                ({displayedRemedy.abbreviation})
               </span>
             </h3>
-            <p className="text-slate-300">
-              Keynote text will appear here once we hook up your
-              <code className="ml-1 text-xs bg-slate-700 px-1 py-0.5 rounded">
-                REMEDY_KEYNOTES
-              </code>
-              .
+
+            {displayedKeynotes ? (
+              <>
+                {displayedKeynotes.mentalEmotionalThemes && (
+                  <p>
+                    <span className="font-semibold">Mental / Emotional:</span>{' '}
+                    {displayedKeynotes.mentalEmotionalThemes}
+                  </p>
+                )}
+                {displayedKeynotes.generalThemes && (
+                  <p>
+                    <span className="font-semibold">General:</span>{' '}
+                    {displayedKeynotes.generalThemes}
+                  </p>
+                )}
+                {displayedKeynotes.keyLocalSymptoms && (
+                  <p>
+                    <span className="font-semibold">Key local symptoms:</span>{' '}
+                    {displayedKeynotes.keyLocalSymptoms}
+                  </p>
+                )}
+                {displayedKeynotes.worseFrom && (
+                  <p>
+                    <span className="font-semibold">Worse from:</span>{' '}
+                    {displayedKeynotes.worseFrom}
+                  </p>
+                )}
+                {displayedKeynotes.betterFrom && (
+                  <p>
+                    <span className="font-semibold">Better from:</span>{' '}
+                    {displayedKeynotes.betterFrom}
+                  </p>
+                )}
+                {displayedKeynotes.notesSphere && (
+                  <p>
+                    <span className="font-semibold">Sphere / notes:</span>{' '}
+                    {displayedKeynotes.notesSphere}
+                  </p>
+                )}
+              </>
+            ) : (
+              <p className="text-slate-300">
+                No keynotes found for this remedy in your RemedyKeynotesSheet.
+              </p>
+            )}
+
+            <p className="mt-3 text-xs text-slate-400">
+              Tip: hover a remedy to preview, click a remedy to keep its
+              keynotes visible while you move the mouse.
             </p>
           </div>
         ) : (
           <p className="text-sm text-slate-300">
-            Hover over or click on a remedy in the list below to view it here.
+            Hover over or click on a remedy in the list below to view its
+            keynotes here.
           </p>
         )}
       </div>
@@ -286,13 +336,17 @@ export const RemedySelectionForm: React.FC<RemedySelectionFormProps> = ({
               </thead>
               <tbody className="bg-slate-800 divide-y divide-slate-700">
                 {sortedAndFilteredRemedies.map((remedy) => {
-                  const isSelected = !!selections[remedy.srNo];
-                  const isFocused = focusedRemedy?.srNo === remedy.srNo;
+                  const isSelected = selectedRemedy?.srNo === remedy.srNo;
+                  const isDisplayed = displayedRemedy?.srNo === remedy.srNo;
 
                   const rowClasses = [
                     'transition-all group cursor-pointer',
-                    isSelected ? 'bg-cyan-900/30' : 'hover:bg-slate-700/50',
-                    isFocused ? 'outline outline-2 outline-cyan-400/80' : '',
+                    isSelected
+                      ? 'bg-cyan-900/40'
+                      : isDisplayed
+                      ? 'bg-cyan-900/20'
+                      : 'hover:bg-slate-700/50',
+                    isDisplayed ? 'outline outline-2 outline-cyan-400/70' : '',
                   ]
                     .filter(Boolean)
                     .join(' ');
@@ -301,9 +355,13 @@ export const RemedySelectionForm: React.FC<RemedySelectionFormProps> = ({
                     <tr
                       key={remedy.srNo}
                       className={rowClasses}
-                      // Hover OR click both focus the remedy
-                      onMouseEnter={() => setFocusedRemedy(remedy)}
-                      onClick={() => setFocusedRemedy(remedy)}
+                      onMouseEnter={() => setHoveredRemedy(remedy)}
+                      onMouseLeave={() =>
+                        setHoveredRemedy((current) =>
+                          current?.srNo === remedy.srNo ? null : current,
+                        )
+                      }
+                      onClick={() => setSelectedRemedy(remedy)}
                     >
                       <td className="px-6 py-4 whitespace-nowrap">
                         <div className="flex items-center gap-2">
