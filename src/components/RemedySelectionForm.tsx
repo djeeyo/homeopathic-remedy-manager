@@ -1,9 +1,9 @@
 import React, { useState, useMemo } from 'react';
 import type { Remedy, Potency, ClientSelections } from '../types';
 import { POTENCIES } from '../types';
-import { REMEDY_KEYNOTES } from '../../constants/remedyKeynotes';
+import { REMEDY_KEYNOTES } from '../constants/remedyKeynotes';
 
-// Define types for sorting
+// ---- Sorting types ----
 type SortKey = 'name' | 'abbreviation';
 interface SortConfig {
   key: SortKey;
@@ -19,6 +19,7 @@ interface RemedySelectionFormProps {
   onGenerate: () => void;
 }
 
+// ---- Small icons ----
 const SearchIcon: React.FC<React.SVGProps<SVGSVGElement>> = (props) => (
   <svg
     xmlns="http://www.w3.org/2000/svg"
@@ -37,7 +38,7 @@ const SearchIcon: React.FC<React.SVGProps<SVGSVGElement>> = (props) => (
 );
 
 const InformationCircleIcon: React.FC<React.SVGProps<SVGSVGElement>> = (
-  props,
+  props
 ) => (
   <svg
     xmlns="http://www.w3.org/2000/svg"
@@ -55,46 +56,47 @@ const InformationCircleIcon: React.FC<React.SVGProps<SVGSVGElement>> = (
   </svg>
 );
 
-const SortIndicator: React.FC<{ active: boolean; direction: 'asc' | 'desc' }> = ({
-  active,
-  direction,
-}) => {
-  if (!active) {
+const SortIndicator: React.FC<{ active: boolean; direction: 'asc' | 'desc' }> =
+  ({ active, direction }) => {
+    if (!active) {
+      return (
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          fill="none"
+          viewBox="0 0 24 24"
+          strokeWidth={2}
+          stroke="currentColor"
+          className="h-4 w-4 ml-1 text-slate-500 opacity-0 group-hover:opacity-100 transition-opacity"
+        >
+          <path
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            d="M8.25 15 12 18.75 15.75 15m-7.5-6L12 5.25 15.75 9"
+          />
+        </svg>
+      );
+    }
+
+    const d =
+      direction === 'asc'
+        ? 'm19 9-7 7-7-7' // down arrow
+        : 'm5 15 7-7 7 7'; // up arrow
+
     return (
       <svg
         xmlns="http://www.w3.org/2000/svg"
         fill="none"
         viewBox="0 0 24 24"
-        strokeWidth={2}
+        strokeWidth={3}
         stroke="currentColor"
-        className="h-4 w-4 ml-1 text-slate-500 opacity-0 group-hover:opacity-100 transition-opacity"
+        className="h-3 w-3 ml-1 text-cyan-400"
       >
-        <path
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          d="M8.25 15 12 18.75 15.75 15m-7.5-6L12 5.25 15.75 9"
-        />
+        <path strokeLinecap="round" strokeLinejoin="round" d={d} />
       </svg>
     );
-  }
-  const d =
-    direction === 'asc'
-      ? 'm19 9-7 7-7-7'
-      : 'm5 15 7-7 7 7';
-  return (
-    <svg
-      xmlns="http://www.w3.org/2000/svg"
-      fill="none"
-      viewBox="0 0 24 24"
-      strokeWidth={3}
-      stroke="currentColor"
-      className="h-3 w-3 ml-1 text-cyan-400"
-    >
-      <path strokeLinecap="round" strokeLinejoin="round" d={d} />
-    </svg>
-  );
-};
+  };
 
+// ---- Main component ----
 export const RemedySelectionForm: React.FC<RemedySelectionFormProps> = ({
   remedies,
   patientName,
@@ -109,17 +111,14 @@ export const RemedySelectionForm: React.FC<RemedySelectionFormProps> = ({
     direction: 'asc',
   });
 
-  // Hovered remedy (for preview)
-  const [hoveredRemedy, setHoveredRemedy] = useState<Remedy | null>(null);
-  // Clicked remedy (locks the panel so it doesn't "disappear")
-  const [selectedRemedy, setSelectedRemedy] = useState<Remedy | null>(null);
+  // Selected remedy whose keynotes we show in the panel
+  const [focusedRemedy, setFocusedRemedy] = useState<Remedy | null>(null);
 
-  // Remedy currently displayed in the keynotes panel
-  const displayedRemedy = hoveredRemedy || selectedRemedy;
+  // --- Handlers ---
 
   const handleSelectionChange = (srNo: string, potency: Potency) => {
     setSelections((prev) => {
-      const newSelections = { ...prev };
+      const newSelections: ClientSelections = { ...prev };
       const currentPotencies = new Set(newSelections[srNo]);
 
       if (currentPotencies.has(potency)) {
@@ -145,13 +144,15 @@ export const RemedySelectionForm: React.FC<RemedySelectionFormProps> = ({
     setSortConfig({ key, direction });
   };
 
+  // --- Derived data ---
+
   const sortedAndFilteredRemedies = useMemo(() => {
     const lowercasedFilter = searchTerm.toLowerCase();
     const filtered = searchTerm
       ? remedies.filter(
           (remedy) =>
             remedy.name.toLowerCase().includes(lowercasedFilter) ||
-            remedy.abbreviation.toLowerCase().includes(lowercasedFilter),
+            remedy.abbreviation.toLowerCase().includes(lowercasedFilter)
         )
       : [...remedies];
 
@@ -165,14 +166,10 @@ export const RemedySelectionForm: React.FC<RemedySelectionFormProps> = ({
   const selectionCount = Object.keys(selections).length;
   const isFormValid = patientName.trim() !== '' && selectionCount > 0;
 
-  const displayedKeynotes =
-    displayedRemedy && REMEDY_KEYNOTES[displayedRemedy.abbreviation]
-      ? REMEDY_KEYNOTES[displayedRemedy.abbreviation]
-      : null;
-
+  // ---- Render ----
   return (
     <div className="space-y-6">
-      {/* Client information */}
+      {/* Client info & search */}
       <div className="p-6 bg-slate-800/50 rounded-lg shadow-xl">
         <h2 className="text-xl font-semibold text-cyan-300 mb-4">
           Client &amp; Remedy Selection
@@ -216,74 +213,70 @@ export const RemedySelectionForm: React.FC<RemedySelectionFormProps> = ({
         </div>
       </div>
 
-      {/* Remedy Keynotes panel (permanent) */}
+      {/* Permanent keynotes panel */}
       <div className="p-6 bg-slate-800/50 rounded-lg shadow-xl">
         <h2 className="text-xl font-semibold text-cyan-300 mb-4">
           Remedy Keynotes
         </h2>
-        {displayedRemedy ? (
-          <div className="space-y-2 text-sm text-slate-200">
-            <h3 className="text-lg font-semibold text-cyan-200">
-              {displayedRemedy.name}{' '}
-              <span className="text-slate-400 text-sm">
-                ({displayedRemedy.abbreviation})
-              </span>
-            </h3>
 
-            {displayedKeynotes ? (
-              <>
-                {displayedKeynotes.mentalEmotionalThemes && (
-                  <p>
-                    <span className="font-semibold">Mental / Emotional:</span>{' '}
-                    {displayedKeynotes.mentalEmotionalThemes}
-                  </p>
-                )}
-                {displayedKeynotes.generalThemes && (
-                  <p>
-                    <span className="font-semibold">General:</span>{' '}
-                    {displayedKeynotes.generalThemes}
-                  </p>
-                )}
-                {displayedKeynotes.keyLocalSymptoms && (
-                  <p>
-                    <span className="font-semibold">Key local symptoms:</span>{' '}
-                    {displayedKeynotes.keyLocalSymptoms}
-                  </p>
-                )}
-                {displayedKeynotes.worseFrom && (
-                  <p>
-                    <span className="font-semibold">Worse from:</span>{' '}
-                    {displayedKeynotes.worseFrom}
-                  </p>
-                )}
-                {displayedKeynotes.betterFrom && (
-                  <p>
-                    <span className="font-semibold">Better from:</span>{' '}
-                    {displayedKeynotes.betterFrom}
-                  </p>
-                )}
-                {displayedKeynotes.notesSphere && (
-                  <p>
-                    <span className="font-semibold">Sphere / notes:</span>{' '}
-                    {displayedKeynotes.notesSphere}
-                  </p>
-                )}
-              </>
-            ) : (
-              <p className="text-slate-300">
-                No keynotes found for this remedy in your RemedyKeynotesSheet.
-              </p>
-            )}
+        {focusedRemedy ? (
+          (() => {
+            const keynotes = REMEDY_KEYNOTES[focusedRemedy.abbreviation];
 
-            <p className="mt-3 text-xs text-slate-400">
-              Tip: hover a remedy to preview, click a remedy to keep its
-              keynotes visible while you move the mouse.
-            </p>
-          </div>
+            if (!keynotes) {
+              return (
+                <>
+                  <h3 className="text-lg font-semibold text-slate-100 mb-1">
+                    {focusedRemedy.name}{' '}
+                    <span className="text-slate-400 text-sm">
+                      ({focusedRemedy.abbreviation})
+                    </span>
+                  </h3>
+                  <p className="text-sm text-slate-400 mt-2">
+                    No keynotes found for this remedy in your RemedyKeynotesSheet.
+                  </p>
+                </>
+              );
+            }
+
+            return (
+              <div className="space-y-2 text-sm text-slate-200">
+                <h3 className="text-lg font-semibold text-slate-100 mb-1">
+                  {focusedRemedy.name}{' '}
+                  <span className="text-slate-400 text-sm">
+                    ({focusedRemedy.abbreviation})
+                  </span>
+                </h3>
+                <p>
+                  <span className="font-semibold">Mental / Emotional: </span>
+                  {keynotes.mentalEmotionalThemes}
+                </p>
+                <p>
+                  <span className="font-semibold">General Themes: </span>
+                  {keynotes.generalThemes}
+                </p>
+                <p>
+                  <span className="font-semibold">Key Local Symptoms: </span>
+                  {keynotes.keyLocalSymptoms}
+                </p>
+                <p>
+                  <span className="font-semibold">Worse From: </span>
+                  {keynotes.worseFrom}
+                </p>
+                <p>
+                  <span className="font-semibold">Better From: </span>
+                  {keynotes.betterFrom}
+                </p>
+                <p>
+                  <span className="font-semibold">Notes / Sphere: </span>
+                  {keynotes.notesSphere}
+                </p>
+              </div>
+            );
+          })()
         ) : (
-          <p className="text-sm text-slate-300">
-            Hover over or click on a remedy in the list below to view its
-            keynotes here.
+          <p className="text-sm text-slate-400">
+            Click on a remedy in the list below to view its keynotes here.
           </p>
         )}
       </div>
@@ -336,32 +329,23 @@ export const RemedySelectionForm: React.FC<RemedySelectionFormProps> = ({
               </thead>
               <tbody className="bg-slate-800 divide-y divide-slate-700">
                 {sortedAndFilteredRemedies.map((remedy) => {
-                  const isSelected = selectedRemedy?.srNo === remedy.srNo;
-                  const isDisplayed = displayedRemedy?.srNo === remedy.srNo;
+                  const isSelected = !!selections[remedy.srNo];
+                  const isFocused = focusedRemedy?.srNo === remedy.srNo;
 
                   const rowClasses = [
-                    'transition-all group cursor-pointer',
-                    isSelected
-                      ? 'bg-cyan-900/40'
-                      : isDisplayed
-                      ? 'bg-cyan-900/20'
+                    'transition-colors cursor-pointer group',
+                    isFocused
+                      ? 'bg-slate-700/70'
+                      : isSelected
+                      ? 'bg-cyan-900/30'
                       : 'hover:bg-slate-700/50',
-                    isDisplayed ? 'outline outline-2 outline-cyan-400/70' : '',
-                  ]
-                    .filter(Boolean)
-                    .join(' ');
+                  ].join(' ');
 
                   return (
                     <tr
                       key={remedy.srNo}
                       className={rowClasses}
-                      onMouseEnter={() => setHoveredRemedy(remedy)}
-                      onMouseLeave={() =>
-                        setHoveredRemedy((current) =>
-                          current?.srNo === remedy.srNo ? null : current,
-                        )
-                      }
-                      onClick={() => setSelectedRemedy(remedy)}
+                      onClick={() => setFocusedRemedy(remedy)}
                     >
                       <td className="px-6 py-4 whitespace-nowrap">
                         <div className="flex items-center gap-2">
@@ -380,6 +364,10 @@ export const RemedySelectionForm: React.FC<RemedySelectionFormProps> = ({
                         <td
                           key={potency}
                           className="px-6 py-4 whitespace-nowrap text-center"
+                          onClick={(e) => {
+                            e.stopPropagation(); // don’t change keynotes when just toggling potency
+                            handleSelectionChange(remedy.srNo, potency);
+                          }}
                         >
                           <label className="flex items-center justify-center space-x-2 cursor-pointer">
                             <input
@@ -387,10 +375,9 @@ export const RemedySelectionForm: React.FC<RemedySelectionFormProps> = ({
                               checked={
                                 selections[remedy.srNo]?.has(potency) || false
                               }
-                              onChange={(e) => {
-                                e.stopPropagation();
-                                handleSelectionChange(remedy.srNo, potency);
-                              }}
+                              onChange={() =>
+                                handleSelectionChange(remedy.srNo, potency)
+                              }
                               className="h-5 w-5 rounded bg-slate-700 border-slate-500 text-cyan-500 focus:ring-cyan-600 cursor-pointer"
                             />
                             <span className="text-sm text-slate-300">
@@ -412,8 +399,8 @@ export const RemedySelectionForm: React.FC<RemedySelectionFormProps> = ({
       <div className="sticky bottom-0 left-0 right-0 p-4 bg-slate-900/80 backdrop-blur-sm border-t border-slate-700 flex items-center justify-center md:justify-end">
         <div className="flex items-center gap-4">
           <span className="text-slate-300">
-            {selectionCount} {selectionCount === 1 ? 'remedy' : 'remedies'}{' '}
-            selected
+            {selectionCount}{' '}
+            {selectionCount === 1 ? 'remedy' : 'remedies'} selected
           </span>
           <button
             onClick={onGenerate}
