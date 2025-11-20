@@ -1,5 +1,4 @@
-// src/components/RemedySelectionForm.tsx
-import React, { useState, useMemo, Dispatch, SetStateAction } from "react";
+import React, { useState, useMemo } from "react";
 import type { Remedy, ClientSelections, Potency } from "../types";
 import { POTENCIES } from "../types";
 import { REMEDY_KEYNOTES } from "../constants/remedyKeynotes";
@@ -7,11 +6,24 @@ import { REMEDY_KEYNOTES } from "../constants/remedyKeynotes";
 interface RemedySelectionFormProps {
   remedies: Remedy[];
   patientName: string;
-  setPatientName: Dispatch<SetStateAction<string>>;
+  setPatientName: (name: string) => void;
   selections: ClientSelections;
-  setSelections: Dispatch<SetStateAction<ClientSelections>>;
+  setSelections: React.Dispatch<React.SetStateAction<ClientSelections>>;
   onGenerate: () => void;
 }
+
+const SearchIcon: React.FC<React.SVGProps<SVGSVGElement>> = (props) => (
+  <svg
+    viewBox="0 0 24 24"
+    aria-hidden="true"
+    {...props}
+  >
+    <path
+      d="M10.5 4a6.5 6.5 0 0 1 5.16 10.5l3.92 3.92a1 1 0 0 1-1.42 1.42l-3.92-3.92A6.5 6.5 0 1 1 10.5 4zm0 2a4.5 4.5 0 1 0 0 9 4.5 4.5 0 0 0 0-9z"
+      fill="currentColor"
+    />
+  </svg>
+);
 
 export const RemedySelectionForm: React.FC<RemedySelectionFormProps> = ({
   remedies,
@@ -21,265 +33,309 @@ export const RemedySelectionForm: React.FC<RemedySelectionFormProps> = ({
   setSelections,
   onGenerate,
 }) => {
-  const [searchTerm, setSearchTerm] = useState("");
-  const [activeAbbreviation, setActiveAbbreviation] = useState<string | null>(
-    null,
-  );
+  const [searchQuery, setSearchQuery] = useState("");
+  const [activeRemedyAbbr, setActiveRemedyAbbr] = useState<string | null>(null);
 
-  // --- filter remedies by search term ---
+  // --- Filter remedies by search ------------------------------------------------
   const filteredRemedies = useMemo(() => {
-    const term = searchTerm.trim().toLowerCase();
-    if (!term) return remedies;
+    const q = searchQuery.trim().toLowerCase();
+    if (!q) return remedies;
 
-    return remedies.filter((r) => {
-      const name = r.name.toLowerCase();
-      const abbr = r.abbreviation.toLowerCase();
-      return name.includes(term) || abbr.includes(term);
+    return remedies.filter((remedy) => {
+      const name = remedy.name.toLowerCase();
+      const abbr = remedy.abbreviation.toLowerCase();
+      return name.includes(q) || abbr.includes(q);
     });
-  }, [remedies, searchTerm]);
+  }, [remedies, searchQuery]);
 
-  // --- count selected boxes ---
-  const selectionCount = useMemo(() => {
-    return Object.values(selections).reduce((sum, set) => {
-      if (!set) return sum;
-      return sum + set.size;
-    }, 0);
-  }, [selections]);
+  // --- Which remedy is "active" for keynotes ------------------------------------
+  const activeRemedy = useMemo(() => {
+    if (activeRemedyAbbr) {
+      const byAbbr = remedies.find(
+        (r) => r.abbreviation === activeRemedyAbbr
+      );
+      if (byAbbr) return byAbbr;
+    }
+    // Fallback: first in filtered list
+    return filteredRemedies[0] ?? null;
+  }, [activeRemedyAbbr, filteredRemedies, remedies]);
 
-  // --- current keynotes ---
-  const currentKeynotes =
-    activeAbbreviation && REMEDY_KEYNOTES[activeAbbreviation]
-      ? REMEDY_KEYNOTES[activeAbbreviation]
+  const keynotes =
+    activeRemedy && REMEDY_KEYNOTES[activeRemedy.abbreviation]
+      ? REMEDY_KEYNOTES[activeRemedy.abbreviation]
       : null;
 
-  const currentKeynotesTitle = useMemo(() => {
-    if (!activeAbbreviation) return "";
-    const remedy = remedies.find(
-      (r) => r.abbreviation === activeAbbreviation,
-    );
-    return remedy ? `${remedy.name} (${remedy.abbreviation})` : "";
-  }, [activeAbbreviation, remedies]);
+  // --- Selection helpers --------------------------------------------------------
+  const selectionCount = useMemo(
+    () => Object.keys(selections).length,
+    [selections]
+  );
 
-  // --- toggle a potency checkbox for given srNo + potency ---
-  const togglePotency = (srNo: string, potency: Potency) => {
+  const toggleSelection = (srNo: string, potency: Potency) => {
     setSelections((prev) => {
-      const existing = prev[srNo] ?? new Set<Potency>();
-      const next = new Set(existing);
+      const next: ClientSelections = { ...prev };
+      const current = prev[srNo] ? new Set(prev[srNo]) : new Set<Potency>();
 
-      if (next.has(potency)) {
-        next.delete(potency);
+      if (current.has(potency)) {
+        current.delete(potency);
       } else {
-        next.add(potency);
+        current.add(potency);
       }
 
-      const updated: ClientSelections = {
-        ...prev,
-        [srNo]: next,
-      };
+      if (current.size === 0) {
+        delete next[srNo];
+      } else {
+        next[srNo] = current;
+      }
 
-      return updated;
+      return next;
     });
   };
 
   const handleGenerateClick = () => {
-    if (!patientName.trim()) {
-      alert("Please enter a patient name before generating.");
-      return;
-    }
-    if (selectionCount === 0) {
-      alert("Please select at least one remedy/potency.");
-      return;
-    }
+    if (!patientName.trim() || selectionCount === 0) return;
     onGenerate();
   };
 
+  // ----------------------------------------------------------------------------- //
+  //                                  RENDER                                       //
+  // ----------------------------------------------------------------------------- //
+
   return (
     <div className="space-y-6">
-      {/* Top: Patient + Search (static) */}
-      <section className="grid grid-cols-1 md:grid-cols-2 gap-4 bg-slate-900">
-        {/* Patient */}
-        <div className="bg-slate-900 border border-slate-800 rounded-lg p-4 shadow-sm">
-          <h2 className="text-lg font-semibold text-slate-100 mb-3">
-            Client &amp; Remedy Selection
-          </h2>
-          <label className="block text-sm text-slate-300 mb-1" htmlFor="patient">
-            Patient Name
-          </label>
-          <input
-            id="patient"
-            type="text"
-            className="w-full rounded-md border border-slate-700 bg-slate-800 px-3 py-2 text-sm text-slate-100 focus:outline-none focus:ring-2 focus:ring-cyan-500"
-            placeholder="Enter patient's full name"
-            value={patientName}
-            onChange={(e) => setPatientName(e.target.value)}
-          />
-        </div>
+      {/* TOP: Patient + Search */}
+      <section className="bg-slate-900 border border-slate-800 rounded-xl p-4 md:p-6 shadow-lg">
+        <h2 className="text-lg font-semibold text-cyan-300 mb-4">
+          Client &amp; Remedy Selection
+        </h2>
 
-        {/* Search */}
-        <div className="bg-slate-900 border border-slate-800 rounded-lg p-4 shadow-sm">
-          <h2 className="text-lg font-semibold text-slate-100 mb-3">
-            Search Remedies
-          </h2>
-          <label
-            className="block text-sm text-slate-300 mb-1"
-            htmlFor="remedy-search"
-          >
-            Filter by name or abbreviation…
-          </label>
-          <input
-            id="remedy-search"
-            type="text"
-            className="w-full rounded-md border border-slate-700 bg-slate-800 px-3 py-2 text-sm text-slate-100 focus:outline-none focus:ring-2 focus:ring-cyan-500"
-            placeholder="Type to search…"
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-          />
+        <div className="grid gap-4 md:grid-cols-2">
+          {/* Patient name */}
+          <div className="flex flex-col space-y-2">
+            <label
+              htmlFor="patientName"
+              className="text-sm font-medium text-slate-300"
+            >
+              Patient Name
+            </label>
+            <input
+              id="patientName"
+              type="text"
+              value={patientName}
+              onChange={(e) => setPatientName(e.target.value)}
+              placeholder="Enter patient's full name"
+              className="w-full rounded-md border border-slate-700 bg-slate-800 px-3 py-2 text-sm text-slate-100 placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500"
+            />
+          </div>
+
+          {/* Search remedies */}
+          <div className="flex flex-col space-y-2">
+            <label
+              htmlFor="searchRemedies"
+              className="text-sm font-medium text-slate-300"
+            >
+              Search Remedies
+            </label>
+            <div className="relative">
+              <SearchIcon className="pointer-events-none absolute left-3 top-2.5 h-4 w-4 text-slate-500" />
+              <input
+                id="searchRemedies"
+                type="text"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder="Filter by name or abbreviation..."
+                className="w-full rounded-md border border-slate-700 bg-slate-800 pl-9 pr-3 py-2 text-sm text-slate-100 placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500"
+              />
+            </div>
+          </div>
         </div>
       </section>
 
-      {/* Keynotes (static panel) */}
-      <section className="bg-slate-900 border border-slate-800 rounded-lg p-4 shadow-sm min-h-[180px]">
-        <h2 className="text-lg font-semibold text-slate-100 mb-3">
+      {/* MIDDLE: Scrollable Remedy List */}
+      <section className="bg-slate-900 border border-slate-800 rounded-xl shadow-lg">
+        <div className="border-b border-slate-800 px-4 py-3 md:px-6">
+          <h2 className="text-lg font-semibold text-cyan-300">Remedy List</h2>
+          <p className="text-xs text-slate-400 mt-1">
+            Click a row to view keynotes below and use the checkboxes to choose
+            potencies.
+          </p>
+        </div>
+
+        <div className="max-h-[420px] overflow-y-auto">
+          <table className="min-w-full text-sm">
+            <thead className="sticky top-0 z-10 bg-slate-900 border-b border-slate-800">
+              <tr>
+                <th className="px-4 py-2 text-left font-medium text-slate-300 md:px-6">
+                  Name
+                </th>
+                <th className="px-4 py-2 text-left font-medium text-slate-300 md:px-6">
+                  Abbreviation
+                </th>
+                {POTENCIES.map((potency) => (
+                  <th
+                    key={potency}
+                    className="px-2 py-2 text-center font-medium text-slate-300"
+                  >
+                    {potency}
+                  </th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {filteredRemedies.map((remedy) => {
+                const isActive =
+                  activeRemedy && activeRemedy.srNo === remedy.srNo;
+                return (
+                  <tr
+                    key={remedy.srNo}
+                    className={`cursor-pointer border-b border-slate-800/60 transition-colors ${
+                      isActive
+                        ? "bg-slate-800/70"
+                        : "hover:bg-slate-800/40"
+                    }`}
+                    onClick={() => setActiveRemedyAbbr(remedy.abbreviation)}
+                  >
+                    <td className="px-4 py-2 md:px-6 text-slate-100">
+                      {remedy.name}
+                    </td>
+                    <td className="px-4 py-2 md:px-6 text-slate-300">
+                      {remedy.abbreviation}
+                    </td>
+                    {POTENCIES.map((potency) => {
+                      const checked =
+                        selections[remedy.srNo]?.has(potency) ?? false;
+                      return (
+                        <td
+                          key={potency}
+                          className="px-2 py-2 text-center align-middle"
+                          onClick={(e) => e.stopPropagation()}
+                        >
+                          <input
+                            type="checkbox"
+                            className="h-4 w-4 rounded border-slate-600 bg-slate-800 text-cyan-500 focus:ring-cyan-500"
+                            checked={checked}
+                            onChange={() =>
+                              toggleSelection(remedy.srNo, potency)
+                            }
+                          />
+                        </td>
+                      );
+                    })}
+                  </tr>
+                );
+              })}
+
+              {filteredRemedies.length === 0 && (
+                <tr>
+                  <td
+                    colSpan={2 + POTENCIES.length}
+                    className="px-4 py-6 text-center text-slate-400"
+                  >
+                    No remedies match your search.
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      {/* BOTTOM: Remedy Keynotes */}
+      <section className="bg-slate-900 border border-slate-800 rounded-xl p-4 md:p-6 shadow-lg">
+        <h2 className="text-lg font-semibold text-cyan-300 mb-3">
           Remedy Keynotes
         </h2>
 
-        {currentKeynotes && currentKeynotesTitle ? (
-          <div className="text-sm text-slate-100 space-y-1">
-            <div className="font-semibold text-cyan-300 mb-2">
-              {currentKeynotesTitle}
+        {activeRemedy ? (
+          <>
+            <div className="mb-3">
+              <h3 className="text-base font-semibold text-slate-100">
+                {activeRemedy.name}{" "}
+                <span className="text-xs text-slate-400">
+                  ({activeRemedy.abbreviation})
+                </span>
+              </h3>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="space-y-1">
-                <div>
-                  <span className="font-semibold text-slate-200">
-                    Mental &amp; Emotional Themes
-                  </span>
-                  <div>{currentKeynotes.mentalEmotionalThemes}</div>
+            {keynotes ? (
+              <div className="grid gap-4 md:grid-cols-2 text-sm leading-relaxed">
+                <div className="space-y-3">
+                  <div>
+                    <h4 className="font-semibold text-slate-200">
+                      Mental &amp; Emotional Themes
+                    </h4>
+                    <p className="text-slate-200">
+                      {keynotes.mentalEmotionalThemes}
+                    </p>
+                  </div>
+                  <div>
+                    <h4 className="font-semibold text-slate-200">
+                      General Themes
+                    </h4>
+                    <p className="text-slate-200">{keynotes.generalThemes}</p>
+                  </div>
+                  <div>
+                    <h4 className="font-semibold text-slate-200">
+                      Key Local Symptoms
+                    </h4>
+                    <p className="text-slate-200">
+                      {keynotes.keyLocalSymptoms}
+                    </p>
+                  </div>
                 </div>
-                <div>
-                  <span className="font-semibold text-slate-200">
-                    General Themes
-                  </span>
-                  <div>{currentKeynotes.generalThemes}</div>
-                </div>
-                <div>
-                  <span className="font-semibold text-slate-200">
-                    Key Local Symptoms
-                  </span>
-                  <div>{currentKeynotes.keyLocalSymptoms}</div>
-                </div>
-              </div>
 
-              <div className="space-y-1">
-                <div>
-                  <span className="font-semibold text-slate-200">Worse from</span>
-                  <div>{currentKeynotes.worseFrom}</div>
-                </div>
-                <div>
-                  <span className="font-semibold text-slate-200">Better from</span>
-                  <div>{currentKeynotes.betterFrom}</div>
-                </div>
-                <div>
-                  <span className="font-semibold text-slate-200">
-                    Sphere / Notes
-                  </span>
-                  <div>{currentKeynotes.notesSphere}</div>
+                <div className="space-y-3">
+                  <div>
+                    <h4 className="font-semibold text-slate-200">Worse from</h4>
+                    <p className="text-slate-200">{keynotes.worseFrom}</p>
+                  </div>
+                  <div>
+                    <h4 className="font-semibold text-slate-200">
+                      Better from
+                    </h4>
+                    <p className="text-slate-200">{keynotes.betterFrom}</p>
+                  </div>
+                  <div>
+                    <h4 className="font-semibold text-slate-200">
+                      Sphere / Notes
+                    </h4>
+                    <p className="text-slate-200">{keynotes.notesSphere}</p>
+                  </div>
                 </div>
               </div>
-            </div>
-          </div>
+            ) : (
+              <p className="text-sm text-slate-300">
+                No keynotes found for this remedy in your RemedyKeynotesSheet.
+              </p>
+            )}
+          </>
         ) : (
-          <p className="text-sm text-slate-400">
-            Click a remedy row below to see its keynotes. If no keynotes exist
-            for that remedy yet, you&apos;ll see a short message instead.
+          <p className="text-sm text-slate-300">
+            Select a remedy from the list above to view its keynotes here.
           </p>
         )}
       </section>
 
-      {/* Remedies table in its own scroll area */}
-      <section className="bg-slate-900 border border-slate-800 rounded-lg shadow-sm flex flex-col max-h-[460px]">
-        {/* Table header row stays fixed; body scrolls */}
-        <div className="border-b border-slate-800 px-4 py-2 text-xs font-semibold text-slate-300 grid grid-cols-[minmax(0,2fr)_minmax(0,1fr)_repeat(3,60px)] gap-4">
-          <span>Name</span>
-          <span className="text-center">Abbreviation</span>
-          {POTENCIES.map((p) => (
-            <span key={p} className="text-center">
-              {p}
-            </span>
-          ))}
-        </div>
-
-        <div className="overflow-y-auto">
-          {filteredRemedies.map((remedy) => {
-            const isActive = activeAbbreviation === remedy.abbreviation;
-
-            return (
-              <div
-                key={remedy.srNo}
-                className={`px-4 py-2 text-sm grid grid-cols-[minmax(0,2fr)_minmax(0,1fr)_repeat(3,60px)] gap-4 items-center border-b border-slate-800 cursor-pointer ${
-                  isActive ? "bg-slate-800/80" : "hover:bg-slate-800/40"
-                }`}
-                onClick={() => setActiveAbbreviation(remedy.abbreviation)}
-              >
-                <div className="truncate text-slate-100" title={remedy.name}>
-                  {remedy.name}
-                </div>
-
-                <div className="text-center text-slate-300">
-                  {remedy.abbreviation}
-                </div>
-
-                {POTENCIES.map((p) => {
-                  const checked =
-                    selections[remedy.srNo]?.has(p as Potency) ?? false;
-
-                  return (
-                    <div
-                      key={p}
-                      className="flex justify-center"
-                      onClick={(e) => e.stopPropagation()}
-                    >
-                      <input
-                        type="checkbox"
-                        className="h-4 w-4 rounded border-slate-600 bg-slate-800 text-cyan-500 focus:ring-cyan-500"
-                        checked={checked}
-                        onChange={() =>
-                          togglePotency(remedy.srNo, p as Potency)
-                        }
-                      />
-                    </div>
-                  );
-                })}
-              </div>
-            );
-          })}
-
-          {filteredRemedies.length === 0 && (
-            <div className="px-4 py-6 text-sm text-slate-400 text-center">
-              No remedies match your search.
-            </div>
-          )}
-        </div>
-
-        {/* Bottom bar: generate button */}
-        <div className="border-t border-slate-800 px-4 py-3 flex items-center justify-between bg-slate-900">
-          <span className="text-xs md:text-sm text-slate-300">
-            {selectionCount} {selectionCount === 1 ? "remedy" : "remedies"}{" "}
-            selected
+      {/* STICKY BOTTOM BAR */}
+      <div className="sticky bottom-0 left-0 right-0 p-4 bg-slate-900/90 backdrop-blur border-t border-slate-800 mt-2">
+        <div className="flex items-center justify-between max-w-5xl mx-auto">
+          <span className="text-sm text-slate-300">
+            {selectionCount === 0
+              ? "No remedies selected"
+              : `${selectionCount} ${
+                  selectionCount === 1 ? "remedy" : "remedies"
+                } selected`}
           </span>
           <button
             type="button"
             onClick={handleGenerateClick}
             disabled={!patientName.trim() || selectionCount === 0}
-            className="inline-flex items-center px-4 py-2 rounded-md text-sm font-medium shadow-sm disabled:opacity-50 disabled:cursor-not-allowed bg-cyan-500 hover:bg-cyan-400 text-slate-900"
+            className="inline-flex items-center px-4 py-2 rounded-md bg-cyan-500 text-sm font-medium text-slate-900 shadow hover:bg-cyan-400 disabled:opacity-50 disabled:cursor-not-allowed"
           >
             Generate Prescription
           </button>
         </div>
-      </section>
+      </div>
     </div>
   );
 };
-
-export default RemedySelectionForm;
