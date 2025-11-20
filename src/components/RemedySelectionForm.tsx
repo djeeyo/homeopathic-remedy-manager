@@ -1,5 +1,5 @@
 // src/components/RemedySelectionForm.tsx
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, Dispatch, SetStateAction } from "react";
 import type { Remedy, ClientSelections, Potency } from "../types";
 import { POTENCIES } from "../types";
 import { REMEDY_KEYNOTES } from "../constants/remedyKeynotes";
@@ -7,9 +7,9 @@ import { REMEDY_KEYNOTES } from "../constants/remedyKeynotes";
 interface RemedySelectionFormProps {
   remedies: Remedy[];
   patientName: string;
-  setPatientName: (name: string) => void;
+  setPatientName: Dispatch<SetStateAction<string>>;
   selections: ClientSelections;
-  setSelections: (s: ClientSelections) => void;
+  setSelections: Dispatch<SetStateAction<ClientSelections>>;
   onGenerate: () => void;
 }
 
@@ -62,7 +62,7 @@ export const RemedySelectionForm: React.FC<RemedySelectionFormProps> = ({
 
   // --- toggle a potency checkbox for given srNo + potency ---
   const togglePotency = (srNo: string, potency: Potency) => {
-    setSelections((prev: ClientSelections) => {
+    setSelections((prev) => {
       const existing = prev[srNo] ?? new Set<Potency>();
       const next = new Set(existing);
 
@@ -72,10 +72,12 @@ export const RemedySelectionForm: React.FC<RemedySelectionFormProps> = ({
         next.add(potency);
       }
 
-      return {
+      const updated: ClientSelections = {
         ...prev,
         [srNo]: next,
       };
+
+      return updated;
     });
   };
 
@@ -189,9 +191,8 @@ export const RemedySelectionForm: React.FC<RemedySelectionFormProps> = ({
           </div>
         ) : (
           <p className="text-sm text-slate-400">
-            Hover or click on a remedy (by abbreviation) below to see its
-            keynotes. If no keynotes exist for that remedy yet, you&apos;ll see a
-            short message instead.
+            Click a remedy row below to see its keynotes. If no keynotes exist
+            for that remedy yet, you&apos;ll see a short message instead.
           </p>
         )}
       </section>
