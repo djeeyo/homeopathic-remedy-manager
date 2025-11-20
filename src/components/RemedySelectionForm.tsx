@@ -1,102 +1,20 @@
 import React, { useState, useMemo } from 'react';
-import type { Remedy, Potency, ClientSelections } from '../types';
+import type { Remedy, ClientSelections, Potency } from '../types';
 import { POTENCIES } from '../types';
-import { REMEDY_KEYNOTES } from '../constants/remedyKeynotes';
-
-// ---- Sorting types ----
-type SortKey = 'name' | 'abbreviation';
-interface SortConfig {
-  key: SortKey;
-  direction: 'asc' | 'desc';
-}
+import {
+  REMEDY_KEYNOTES,
+  type RemedyKeynotes,
+} from '../constants/remedyKeynotes';
 
 interface RemedySelectionFormProps {
   remedies: Remedy[];
   patientName: string;
   setPatientName: (name: string) => void;
   selections: ClientSelections;
-  setSelections: React.Dispatch<React.SetStateAction<ClientSelections>>;
+  setSelections: (s: ClientSelections) => void; // <- simple setter, no callback
   onGenerate: () => void;
 }
 
-// ---- Small icons ----
-const SearchIcon: React.FC<React.SVGProps<SVGSVGElement>> = (props) => (
-  <svg
-    xmlns="http://www.w3.org/2000/svg"
-    fill="none"
-    viewBox="0 0 24 24"
-    strokeWidth={1.5}
-    stroke="currentColor"
-    {...props}
-  >
-    <path
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      d="m21 21-5.197-5.197m0 0A7.5 7.5 0 1 0 5.196 5.196a7.5 7.5 0 0 0 10.607 10.607Z"
-    />
-  </svg>
-);
-
-const InformationCircleIcon: React.FC<React.SVGProps<SVGSVGElement>> = (
-  props
-) => (
-  <svg
-    xmlns="http://www.w3.org/2000/svg"
-    fill="none"
-    viewBox="0 0 24 24"
-    strokeWidth={1.5}
-    stroke="currentColor"
-    {...props}
-  >
-    <path
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      d="m11.25 11.25.041-.02a.75.75 0 0 1 1.063.852l-.708 2.836a.75.75 0 0 0 1.063.853l.041-.021M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Zm-9-3.75h.008v.008H12V8.25Z"
-    />
-  </svg>
-);
-
-const SortIndicator: React.FC<{ active: boolean; direction: 'asc' | 'desc' }> =
-  ({ active, direction }) => {
-    if (!active) {
-      return (
-        <svg
-          xmlns="http://www.w3.org/2000/svg"
-          fill="none"
-          viewBox="0 0 24 24"
-          strokeWidth={2}
-          stroke="currentColor"
-          className="h-4 w-4 ml-1 text-slate-500 opacity-0 group-hover:opacity-100 transition-opacity"
-        >
-          <path
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            d="M8.25 15 12 18.75 15.75 15m-7.5-6L12 5.25 15.75 9"
-          />
-        </svg>
-      );
-    }
-
-    const d =
-      direction === 'asc'
-        ? 'm19 9-7 7-7-7' // down arrow
-        : 'm5 15 7-7 7 7'; // up arrow
-
-    return (
-      <svg
-        xmlns="http://www.w3.org/2000/svg"
-        fill="none"
-        viewBox="0 0 24 24"
-        strokeWidth={3}
-        stroke="currentColor"
-        className="h-3 w-3 ml-1 text-cyan-400"
-      >
-        <path strokeLinecap="round" strokeLinejoin="round" d={d} />
-      </svg>
-    );
-  };
-
-// ---- Main component ----
 export const RemedySelectionForm: React.FC<RemedySelectionFormProps> = ({
   remedies,
   patientName,
@@ -106,311 +24,256 @@ export const RemedySelectionForm: React.FC<RemedySelectionFormProps> = ({
   onGenerate,
 }) => {
   const [searchTerm, setSearchTerm] = useState('');
-  const [sortConfig, setSortConfig] = useState<SortConfig>({
-    key: 'name',
-    direction: 'asc',
-  });
-
-  // Selected remedy whose keynotes we show in the panel
   const [focusedRemedy, setFocusedRemedy] = useState<Remedy | null>(null);
 
-  // --- Handlers ---
-
-  const handleSelectionChange = (srNo: string, potency: Potency) => {
-    setSelections((prev) => {
-      const newSelections: ClientSelections = { ...prev };
-      const currentPotencies = new Set(newSelections[srNo]);
-
-      if (currentPotencies.has(potency)) {
-        currentPotencies.delete(potency);
-      } else {
-        currentPotencies.add(potency);
-      }
-
-      if (currentPotencies.size === 0) {
-        delete newSelections[srNo];
-      } else {
-        newSelections[srNo] = currentPotencies;
-      }
-      return newSelections;
-    });
-  };
-
-  const requestSort = (key: SortKey) => {
-    let direction: 'asc' | 'desc' = 'asc';
-    if (sortConfig.key === key && sortConfig.direction === 'asc') {
-      direction = 'desc';
-    }
-    setSortConfig({ key, direction });
-  };
-
-  // --- Derived data ---
-
+  // --- filtering / sorting ---
   const sortedAndFilteredRemedies = useMemo(() => {
-    const lowercasedFilter = searchTerm.toLowerCase();
-    const filtered = searchTerm
-      ? remedies.filter(
-          (remedy) =>
-            remedy.name.toLowerCase().includes(lowercasedFilter) ||
-            remedy.abbreviation.toLowerCase().includes(lowercasedFilter)
-        )
-      : [...remedies];
+    const term = searchTerm.trim().toLowerCase();
+    const filtered = term
+      ? remedies.filter((r) => {
+          const name = r.name.toLowerCase();
+          const abbr = r.abbreviation.toLowerCase();
+          return name.includes(term) || abbr.includes(term);
+        })
+      : remedies;
 
-    return filtered.sort((a, b) => {
-      const key = sortConfig.key;
-      const direction = sortConfig.direction === 'asc' ? 1 : -1;
-      return a[key].localeCompare(b[key]) * direction;
-    });
-  }, [remedies, searchTerm, sortConfig]);
+    return [...filtered].sort((a, b) => a.name.localeCompare(b.name));
+  }, [remedies, searchTerm]);
+
+  // --- selections (no setState callback, TS-friendly) ---
+  const handleTogglePotency = (
+    srNo: string,
+    potency: Potency,
+    checked: boolean,
+  ) => {
+    // clone existing selections deeply (clone Sets)
+    const next: ClientSelections = {};
+    for (const [key, set] of Object.entries(selections)) {
+      next[key] = new Set(set) as Set<Potency>;
+    }
+
+    const currentSet = next[srNo] ?? new Set<Potency>();
+
+    if (checked) {
+      currentSet.add(potency);
+    } else {
+      currentSet.delete(potency);
+    }
+
+    if (currentSet.size === 0) {
+      delete next[srNo];
+    } else {
+      next[srNo] = currentSet;
+    }
+
+    setSelections(next);
+  };
 
   const selectionCount = Object.keys(selections).length;
-  const isFormValid = patientName.trim() !== '' && selectionCount > 0;
 
-  // ---- Render ----
+  // --- keynotes lookup (by abbreviation) ---
+  const currentKeynotes: RemedyKeynotes | null = useMemo(() => {
+    if (!focusedRemedy) return null;
+    const abbr = focusedRemedy.abbreviation;
+    return REMEDY_KEYNOTES[abbr] ?? null;
+  }, [focusedRemedy]);
+
+  const handleRowClick = (remedy: Remedy) => {
+    setFocusedRemedy(remedy);
+  };
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!patientName.trim()) {
+      alert('Please enter a patient name before generating a prescription.');
+      return;
+    }
+    if (selectionCount === 0) {
+      alert('Please select at least one remedy.');
+      return;
+    }
+    onGenerate();
+  };
+
   return (
-    <div className="space-y-6">
-      {/* Client info & search */}
-      <div className="p-6 bg-slate-800/50 rounded-lg shadow-xl">
-        <h2 className="text-xl font-semibold text-cyan-300 mb-4">
+    <form className="space-y-8" onSubmit={handleSubmit}>
+      {/* Client info + search */}
+      <section className="bg-slate-800/80 rounded-lg shadow-md p-4 md:p-6">
+        <h2 className="text-lg font-semibold text-slate-100 mb-4">
           Client &amp; Remedy Selection
         </h2>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div className="grid md:grid-cols-2 gap-4">
           <div>
-            <label
-              htmlFor="patientName"
-              className="block text-sm font-medium text-slate-300 mb-1"
-            >
+            <label className="block text-sm text-slate-300 mb-1">
               Patient Name
             </label>
             <input
-              id="patientName"
               type="text"
               value={patientName}
               onChange={(e) => setPatientName(e.target.value)}
               placeholder="Enter patient's full name"
-              className="w-full bg-slate-700 border border-slate-600 rounded-md shadow-sm py-2 px-3 text-white focus:outline-none focus:ring-2 focus:ring-cyan-500 transition"
+              className="w-full rounded-md bg-slate-900/80 border border-slate-700 px-3 py-2 text-sm text-slate-100 focus:outline-none focus:ring-2 focus:ring-cyan-500"
             />
           </div>
-          <div className="relative">
-            <label
-              htmlFor="searchRemedy"
-              className="block text-sm font-medium text-slate-300 mb-1"
-            >
+          <div>
+            <label className="block text-sm text-slate-300 mb-1">
               Search Remedies
             </label>
-            <div className="relative">
-              <input
-                id="searchRemedy"
-                type="text"
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                placeholder="Filter by name or abbreviation..."
-                className="w-full bg-slate-700 border border-slate-600 rounded-md shadow-sm py-2 pl-10 pr-3 text-white focus:outline-none focus:ring-2 focus:ring-cyan-500 transition"
-              />
-              <SearchIcon className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-400" />
-            </div>
+            <input
+              type="text"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              placeholder="Filter by name or abbreviation..."
+              className="w-full rounded-md bg-slate-900/80 border border-slate-700 px-3 py-2 text-sm text-slate-100 focus:outline-none focus:ring-2 focus:ring-cyan-500"
+            />
           </div>
         </div>
-      </div>
+      </section>
 
-      {/* Permanent keynotes panel */}
-      <div className="p-6 bg-slate-800/50 rounded-lg shadow-xl">
-        <h2 className="text-xl font-semibold text-cyan-300 mb-4">
+      {/* Keynotes panel */}
+      <section className="bg-slate-800/80 rounded-lg shadow-md p-4 md:p-6">
+        <h2 className="text-lg font-semibold text-slate-100 mb-2">
           Remedy Keynotes
         </h2>
 
         {focusedRemedy ? (
-          (() => {
-            const keynotes = REMEDY_KEYNOTES[focusedRemedy.abbreviation];
+          <div className="space-y-3">
+            <h3 className="text-base md:text-lg font-semibold text-cyan-300">
+              {focusedRemedy.name}{' '}
+              <span className="text-xs md:text-sm text-slate-400">
+                ({focusedRemedy.abbreviation})
+              </span>
+            </h3>
 
-            if (!keynotes) {
-              return (
-                <>
-                  <h3 className="text-lg font-semibold text-slate-100 mb-1">
-                    {focusedRemedy.name}{' '}
-                    <span className="text-slate-400 text-sm">
-                      ({focusedRemedy.abbreviation})
-                    </span>
-                  </h3>
-                  <p className="text-sm text-slate-400 mt-2">
-                    No keynotes found for this remedy in your RemedyKeynotesSheet.
-                  </p>
-                </>
-              );
-            }
-
-            return (
+            {currentKeynotes ? (
               <div className="space-y-2 text-sm text-slate-200">
-                <h3 className="text-lg font-semibold text-slate-100 mb-1">
-                  {focusedRemedy.name}{' '}
-                  <span className="text-slate-400 text-sm">
-                    ({focusedRemedy.abbreviation})
-                  </span>
-                </h3>
-                <p>
-                  <span className="font-semibold">Mental / Emotional: </span>
-                  {keynotes.mentalEmotionalThemes}
-                </p>
-                <p>
-                  <span className="font-semibold">General Themes: </span>
-                  {keynotes.generalThemes}
-                </p>
-                <p>
-                  <span className="font-semibold">Key Local Symptoms: </span>
-                  {keynotes.keyLocalSymptoms}
-                </p>
-                <p>
-                  <span className="font-semibold">Worse From: </span>
-                  {keynotes.worseFrom}
-                </p>
-                <p>
-                  <span className="font-semibold">Better From: </span>
-                  {keynotes.betterFrom}
-                </p>
-                <p>
-                  <span className="font-semibold">Notes / Sphere: </span>
-                  {keynotes.notesSphere}
-                </p>
+                <div>
+                  <p className="font-semibold text-cyan-200">
+                    Mental &amp; Emotional Themes
+                  </p>
+                  <p>{currentKeynotes.mentalEmotionalThemes}</p>
+                </div>
+                <div>
+                  <p className="font-semibold text-cyan-200">General Themes</p>
+                  <p>{currentKeynotes.generalThemes}</p>
+                </div>
+                <div>
+                  <p className="font-semibold text-cyan-200">
+                    Key Local Symptoms
+                  </p>
+                  <p>{currentKeynotes.keyLocalSymptoms}</p>
+                </div>
+                <div className="grid md:grid-cols-2 gap-2">
+                  <div>
+                    <p className="font-semibold text-cyan-200">Worse from</p>
+                    <p>{currentKeynotes.worseFrom}</p>
+                  </div>
+                  <div>
+                    <p className="font-semibold text-cyan-200">Better from</p>
+                    <p>{currentKeynotes.betterFrom}</p>
+                  </div>
+                </div>
+                <div>
+                  <p className="font-semibold text-cyan-200">Sphere / Notes</p>
+                  <p>{currentKeynotes.notesSphere}</p>
+                </div>
               </div>
-            );
-          })()
+            ) : (
+              <p className="text-sm text-slate-300">
+                No keynotes found for this remedy in your RemedyKeynotesSheet.
+              </p>
+            )}
+          </div>
         ) : (
-          <p className="text-sm text-slate-400">
-            Click on a remedy in the list below to view its keynotes here.
+          <p className="text-sm text-slate-300">
+            Hover over or click on a remedy in the list below to view its
+            keynotes here.
           </p>
         )}
-      </div>
+      </section>
 
       {/* Remedy table */}
-      <div className="bg-slate-800/50 rounded-lg shadow-xl overflow-hidden">
+      <section className="bg-slate-800/80 rounded-lg shadow-md overflow-hidden">
         <div className="overflow-x-auto">
-          <div className="h-[50vh] overflow-y-auto">
-            <table className="min-w-full divide-y divide-slate-700">
-              <thead className="bg-slate-800 sticky top-0 z-10">
-                <tr>
+          <table className="min-w-full divide-y divide-slate-700 text-sm">
+            <thead className="bg-slate-900/70">
+              <tr>
+                <th className="px-4 py-3 text-left font-medium text-slate-300">
+                  Name
+                </th>
+                <th className="px-4 py-3 text-left font-medium text-slate-300">
+                  Abbreviation
+                </th>
+                {POTENCIES.map((potency) => (
                   <th
-                    scope="col"
-                    className="px-6 py-3 text-left text-xs font-medium text-cyan-300 uppercase tracking-wider"
+                    key={potency}
+                    className="px-4 py-3 text-center font-medium text-slate-300"
                   >
-                    <button
-                      onClick={() => requestSort('name')}
-                      className="flex items-center group focus:outline-none"
-                    >
-                      Name
-                      <SortIndicator
-                        active={sortConfig.key === 'name'}
-                        direction={sortConfig.direction}
-                      />
-                    </button>
+                    {potency}
                   </th>
-                  <th
-                    scope="col"
-                    className="px-6 py-3 text-left text-xs font-medium text-cyan-300 uppercase tracking-wider"
-                  >
-                    <button
-                      onClick={() => requestSort('abbreviation')}
-                      className="flex items-center group focus:outline-none"
-                    >
-                      Abbreviation
-                      <SortIndicator
-                        active={sortConfig.key === 'abbreviation'}
-                        direction={sortConfig.direction}
-                      />
-                    </button>
-                  </th>
-                  <th
-                    scope="col"
-                    colSpan={3}
-                    className="px-6 py-3 text-center text-xs font-medium text-cyan-300 uppercase tracking-wider"
-                  >
-                    Potency
-                  </th>
-                </tr>
-              </thead>
-              <tbody className="bg-slate-800 divide-y divide-slate-700">
-                {sortedAndFilteredRemedies.map((remedy) => {
-                  const isSelected = !!selections[remedy.srNo];
-                  const isFocused = focusedRemedy?.srNo === remedy.srNo;
+                ))}
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-700">
+              {sortedAndFilteredRemedies.map((remedy) => {
+                const selectedSet = selections[remedy.srNo];
 
-                  const rowClasses = [
-                    'transition-colors cursor-pointer group',
-                    isFocused
-                      ? 'bg-slate-700/70'
-                      : isSelected
-                      ? 'bg-cyan-900/30'
-                      : 'hover:bg-slate-700/50',
-                  ].join(' ');
-
-                  return (
-                    <tr
-                      key={remedy.srNo}
-                      className={rowClasses}
-                      onClick={() => setFocusedRemedy(remedy)}
-                    >
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="flex items-center gap-2">
-                          <span className="text-sm font-medium text-slate-200">
-                            {remedy.name}
-                          </span>
-                          <InformationCircleIcon className="h-4 w-4 text-slate-600 group-hover:text-slate-400 transition-colors" />
-                        </div>
+                return (
+                  <tr
+                    key={remedy.srNo}
+                    className={`cursor-pointer transition-colors ${
+                      focusedRemedy?.srNo === remedy.srNo
+                        ? 'bg-slate-700/70'
+                        : 'hover:bg-slate-800/80'
+                    }`}
+                    onClick={() => handleRowClick(remedy)}
+                  >
+                    <td className="px-4 py-3 text-slate-100">{remedy.name}</td>
+                    <td className="px-4 py-3 text-slate-300">
+                      {remedy.abbreviation}
+                    </td>
+                    {POTENCIES.map((potency) => (
+                      <td
+                        key={potency}
+                        className="px-4 py-3 text-center"
+                        onClick={(e) => e.stopPropagation()} // let checkbox be clickable
+                      >
+                        <input
+                          type="checkbox"
+                          checked={selectedSet?.has(potency) ?? false}
+                          onChange={(e) =>
+                            handleTogglePotency(
+                              remedy.srNo,
+                              potency,
+                              e.target.checked,
+                            )
+                          }
+                          className="h-4 w-4 rounded border-slate-500 bg-slate-900 text-cyan-500 focus:ring-cyan-400"
+                        />
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="text-sm text-slate-400">
-                          {remedy.abbreviation}
-                        </div>
-                      </td>
-                      {POTENCIES.map((potency) => (
-                        <td
-                          key={potency}
-                          className="px-6 py-4 whitespace-nowrap text-center"
-                          onClick={(e) => {
-                            e.stopPropagation(); // don’t change keynotes when just toggling potency
-                            handleSelectionChange(remedy.srNo, potency);
-                          }}
-                        >
-                          <label className="flex items-center justify-center space-x-2 cursor-pointer">
-                            <input
-                              type="checkbox"
-                              checked={
-                                selections[remedy.srNo]?.has(potency) || false
-                              }
-                              onChange={() =>
-                                handleSelectionChange(remedy.srNo, potency)
-                              }
-                              className="h-5 w-5 rounded bg-slate-700 border-slate-500 text-cyan-500 focus:ring-cyan-600 cursor-pointer"
-                            />
-                            <span className="text-sm text-slate-300">
-                              {potency}
-                            </span>
-                          </label>
-                        </td>
-                      ))}
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
+                    ))}
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
         </div>
-      </div>
 
-      {/* Bottom bar */}
-      <div className="sticky bottom-0 left-0 right-0 p-4 bg-slate-900/80 backdrop-blur-sm border-t border-slate-700 flex items-center justify-center md:justify-end">
-        <div className="flex items-center gap-4">
-          <span className="text-slate-300">
+        {/* Bottom bar */}
+        <div className="sticky bottom-0 left-0 right-0 p-4 bg-slate-900/80 backdrop-blur-sm border-t border-slate-700 flex items-center gap-4">
+          <span className="text-sm text-slate-300">
             {selectionCount}{' '}
             {selectionCount === 1 ? 'remedy' : 'remedies'} selected
           </span>
           <button
-            onClick={onGenerate}
-            disabled={!isFormValid}
-            className="px-6 py-2 border border-transparent text-base font-medium rounded-md text-white bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-600 hover:to-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-cyan-500 focus:ring-offset-slate-900 disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-lg hover:shadow-cyan-500/30"
+            type="submit"
+            className="ml-auto inline-flex items-center px-4 py-2 rounded-md bg-cyan-500 hover:bg-cyan-400 text-slate-900 font-semibold text-sm shadow-md disabled:opacity-50 disabled:cursor-not-allowed"
+            disabled={selectionCount === 0 || !patientName.trim()}
           >
             Generate Prescription
           </button>
         </div>
-      </div>
-    </div>
+      </section>
+    </form>
   );
 };
