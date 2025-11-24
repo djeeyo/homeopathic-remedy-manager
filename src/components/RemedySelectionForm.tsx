@@ -2,11 +2,13 @@ import React, { useState, useMemo } from "react";
 import type { Remedy, ClientSelections, Potency } from "../types";
 import { POTENCIES } from "../types";
 import { REMEDY_KEYNOTES } from "../constants/remedyKeynotes";
-import type { RemedyKeynotes } from "../constants/remedyKeynotes";
+import type { RemedyKeynotes as BaseKeynotes } from "../constants/remedyKeynotes";
 
 /* -------------------------------------------------------------------------- */
 /*                          Symptom search helpers                            */
 /* -------------------------------------------------------------------------- */
+
+type RemedyKeynotes = BaseKeynotes & { abbreviation: string };
 
 type SearchMode = "name" | "symptoms";
 
@@ -218,11 +220,17 @@ export const RemedySelectionForm: React.FC<RemedySelectionFormProps> = ({
   const [searchQuery, setSearchQuery] = useState("");
   const [searchMode, setSearchMode] = useState<SearchMode>("name");
   const [activeRemedyAbbr, setActiveRemedyAbbr] = useState<string | null>(null);
-  const [symptomOptions, setSymptomOptions] = useState<SymptomSearchOptions>({});
+  const [symptomOptions, setSymptomOptions] = useState<SymptomSearchOptions>(
+    {}
+  );
 
-  // flatten keynotes map once
+  // flatten keynotes map once, adding the abbreviation from the key
   const allKeynotes = useMemo<RemedyKeynotes[]>(
-    () => Object.values(REMEDY_KEYNOTES),
+    () =>
+      Object.entries(REMEDY_KEYNOTES).map(([abbr, data]) => ({
+        abbreviation: abbr,
+        ...(data as BaseKeynotes),
+      })),
     []
   );
 
@@ -729,4 +737,3 @@ export const RemedySelectionForm: React.FC<RemedySelectionFormProps> = ({
     </div>
   );
 };
-
