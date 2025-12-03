@@ -234,19 +234,30 @@ export const RemedySelectionForm: React.FC<RemedySelectionFormProps> = ({
     []
   );
 
+  // alphabetize remedies by name (then abbreviation)
+  const sortedRemedies = useMemo(
+    () =>
+      [...remedies].sort((a, b) => {
+        const nameCompare = a.name.localeCompare(b.name);
+        if (nameCompare !== 0) return nameCompare;
+        return a.abbreviation.localeCompare(b.abbreviation);
+      }),
+    [remedies]
+  );
+
   // --- Filter remedies by name/abbrev -----------------------------------------
   const filteredRemedies = useMemo(() => {
-    if (searchMode !== "name") return remedies;
+    if (searchMode !== "name") return sortedRemedies;
 
     const q = searchQuery.trim().toLowerCase();
-    if (!q) return remedies;
+    if (!q) return sortedRemedies;
 
-    return remedies.filter((remedy) => {
+    return sortedRemedies.filter((remedy) => {
       const name = remedy.name.toLowerCase();
       const abbr = remedy.abbreviation.toLowerCase();
       return name.includes(q) || abbr.includes(q);
     });
-  }, [remedies, searchMode, searchQuery]);
+  }, [sortedRemedies, searchMode, searchQuery]);
 
   // --- Symptom search over keynotes -------------------------------------------
   const symptomResults = useMemo<SymptomSearchResult[]>(() => {
@@ -260,7 +271,7 @@ export const RemedySelectionForm: React.FC<RemedySelectionFormProps> = ({
   const activeRemedy = useMemo(() => {
     // explicit selection wins
     if (activeRemedyAbbr) {
-      const byAbbr = remedies.find(
+      const byAbbr = sortedRemedies.find(
         (r) => r.abbreviation === activeRemedyAbbr
       );
       if (byAbbr) return byAbbr;
@@ -269,7 +280,7 @@ export const RemedySelectionForm: React.FC<RemedySelectionFormProps> = ({
     // if in symptom mode, default to top match
     if (searchMode === "symptoms" && symptomResults.length > 0) {
       const firstAbbr = symptomResults[0].remedy.abbreviation;
-      const match = remedies.find((r) => r.abbreviation === firstAbbr);
+      const match = sortedRemedies.find((r) => r.abbreviation === firstAbbr);
       if (match) return match;
     }
 
@@ -277,7 +288,7 @@ export const RemedySelectionForm: React.FC<RemedySelectionFormProps> = ({
     return filteredRemedies[0] ?? null;
   }, [
     activeRemedyAbbr,
-    remedies,
+    sortedRemedies,
     filteredRemedies,
     searchMode,
     symptomResults,
@@ -558,7 +569,7 @@ export const RemedySelectionForm: React.FC<RemedySelectionFormProps> = ({
               {/* SYMPTOM MODE ROWS */}
               {searchMode === "symptoms" &&
                 symptomResults.map(({ remedy: rk, score }) => {
-                  const remedy = remedies.find(
+                  const remedy = sortedRemedies.find(
                     (r) => r.abbreviation === rk.abbreviation
                   );
                   if (!remedy) return null;

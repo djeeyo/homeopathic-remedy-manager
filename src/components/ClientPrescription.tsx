@@ -21,7 +21,8 @@ export const ClientPrescription: React.FC<ClientPrescriptionProps> = ({
     day: "2-digit",
   });
 
-  const [dosingInstructions, setDosingInstructions] = useState("");
+  // notes keyed by srNo so each row has its own instructions
+  const [notesBySrNo, setNotesBySrNo] = useState<Record<string, string>>({});
 
   const handlePrint = () => {
     window.print();
@@ -57,6 +58,13 @@ export const ClientPrescription: React.FC<ClientPrescriptionProps> = ({
     link.click();
     document.body.removeChild(link);
     URL.revokeObjectURL(url);
+  };
+
+  const handleNoteChange = (srNo: string, value: string) => {
+    setNotesBySrNo((prev) => ({
+      ...prev,
+      [srNo]: value,
+    }));
   };
 
   return (
@@ -112,23 +120,6 @@ export const ClientPrescription: React.FC<ClientPrescriptionProps> = ({
           </div>
         </div>
 
-        {/* Dosing instructions input (used for Notes column) */}
-        <div className="mb-4">
-          <h3 className="text-sm font-semibold text-slate-200 mb-1">
-            Dosing Instructions / Notes
-          </h3>
-          <p className="text-xs text-slate-400 mb-2">
-            Whatever you type here will appear under "Notes" for each remedy in
-            the printout. Leave blank to use the default text.
-          </p>
-          <textarea
-            value={dosingInstructions}
-            onChange={(e) => setDosingInstructions(e.target.value)}
-            placeholder="e.g. Take 1 pellet 30C under the tongue once daily for 5 days, then pause and reassess..."
-            className="w-full min-h-[96px] rounded-md border border-slate-700 bg-slate-800 px-3 py-2 text-sm text-slate-100 placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500"
-          />
-        </div>
-
         <div className="overflow-x-auto">
           <table className="min-w-full text-sm border-t border-slate-800">
             <thead>
@@ -154,23 +145,32 @@ export const ClientPrescription: React.FC<ClientPrescriptionProps> = ({
                   </td>
                 </tr>
               ) : (
-                selectedRemedies.map((remedy) => (
-                  <tr
-                    key={remedy.srNo}
-                    className="border-b border-slate-800 text-slate-100"
-                  >
-                    <td className="px-3 py-2">{remedy.name}</td>
-                    <td className="px-3 py-2">{remedy.abbreviation}</td>
-                    <td className="px-3 py-2">
-                      {(remedy.potencies || []).join(", ")}
-                    </td>
-                    <td className="px-3 py-2 text-slate-400 whitespace-pre-line">
-                      {dosingInstructions.trim()
-                        ? dosingInstructions
-                        : "Individual dosing instructions to be added by practitioner."}
-                    </td>
-                  </tr>
-                ))
+                selectedRemedies.map((remedy) => {
+                  const note = notesBySrNo[remedy.srNo] ?? "";
+
+                  return (
+                    <tr
+                      key={remedy.srNo}
+                      className="border-b border-slate-800 text-slate-100 align-top"
+                    >
+                      <td className="px-3 py-2">{remedy.name}</td>
+                      <td className="px-3 py-2">{remedy.abbreviation}</td>
+                      <td className="px-3 py-2">
+                        {(remedy.potencies || []).join(", ")}
+                      </td>
+                      <td className="px-3 py-2 text-slate-400">
+                        <textarea
+                          value={note}
+                          onChange={(e) =>
+                            handleNoteChange(remedy.srNo, e.target.value)
+                          }
+                          placeholder="Individual dosing instructions to be added by practitioner."
+                          className="w-full min-h-[64px] rounded-md border border-slate-700 bg-slate-800 px-2 py-1 text-xs text-slate-100 placeholder:text-slate-500 focus:outline-none focus:ring-1 focus:ring-cyan-500 focus:border-cyan-500 print:border-none print:bg-transparent print:p-0 print:min-h-0 print:text-slate-900"
+                        />
+                      </td>
+                    </tr>
+                  );
+                })
               )}
             </tbody>
           </table>
@@ -190,4 +190,3 @@ export const ClientPrescription: React.FC<ClientPrescriptionProps> = ({
 };
 
 export default ClientPrescription;
-
