@@ -159,7 +159,8 @@ export const RemedySelectionForm: React.FC<RemedySelectionFormProps> = ({
       </section>
 
       {/* Remedy list */}
-      <section className="bg-slate-900/80 border border-slate-700 rounded-xl shadow-lg flex flex-col max-h-[55vh]">
+      {/* Remedy list */}
+      <section className="bg-slate-900/80 border border-slate-700 rounded-xl shadow-lg flex flex-col max-h-[55vh] print-readable">
         <div className="px-4 pt-4 pb-2 flex items-baseline justify-between">
           <div>
             <h2 className="text-lg font-semibold text-slate-100">
@@ -231,7 +232,8 @@ export const RemedySelectionForm: React.FC<RemedySelectionFormProps> = ({
       </section>
 
       {/* Keynotes panel */}
-      <section className="bg-slate-900/80 border border-slate-700 rounded-xl p-4 md:p-6 shadow-lg">
+      {/* Keynotes panel */}
+      <section className="bg-slate-900/80 border border-slate-700 rounded-xl p-4 md:p-6 shadow-lg print-readable">
         <h2 className="text-lg font-semibold text-slate-100 mb-3">
           Remedy Keynotes
         </h2>

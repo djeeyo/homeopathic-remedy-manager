@@ -8,6 +8,29 @@
 
     <!-- Tailwind via CDN (optional but fine) -->
     <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+  /* Make dark-theme content print with strong contrast */
+  @media print {
+    /* Page background + text */
+    body {
+      background: #ffffff !important;
+      color: #000000 !important;
+      -webkit-print-color-adjust: exact;
+      print-color-adjust: exact;
+    }
+
+    /* Any card/section with this class will print as black on white */
+    .print-readable {
+      background: #ffffff !important;
+      color: #000000 !important;
+      border-color: #000000 !important;
+    }
+
+    .print-readable * {
+      color: #000000 !important;
+    }
+  }
+</style>
   </head>
   <body class="bg-slate-900">
     <div id="root"></div>

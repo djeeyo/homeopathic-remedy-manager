@@ -103,7 +103,7 @@ export const ClientPrescription: React.FC<ClientPrescriptionProps> = ({
       </div>
 
       {/* Prescription card (printable area) */}
-      <section className="bg-slate-900 border border-slate-800 rounded-lg shadow-sm p-6">
+      <section className="bg-slate-900 border border-slate-800 rounded-lg shadow-sm p-6 print-readable">
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-2 mb-6">
           <div>
             <div className="text-sm text-slate-400">Date</div>
