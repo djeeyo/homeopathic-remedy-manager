@@ -118,16 +118,16 @@ export const RemedySelectionForm: React.FC<RemedySelectionFormProps> = ({
   };
 
   return (
-    <div className="flex flex-col gap-6">
+    <div className="flex flex-col gap-6 bg-slate-50/60">
       {/* Client & Search */}
-      <section className="bg-slate-900/80 border border-slate-700 rounded-xl p-4 md:p-6 shadow-lg">
-        <h2 className="text-lg font-semibold text-slate-100 mb-4">
+      <section className="bg-white border border-slate-200 rounded-xl p-4 md:p-6 shadow-sm">
+        <h2 className="text-lg font-semibold text-slate-900 mb-4">
           Client &amp; Remedy Selection
         </h2>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {/* Patient name */}
           <div>
-            <label className="block text-sm font-medium text-slate-300 mb-1">
+            <label className="block text-sm font-medium text-slate-700 mb-1">
               Patient Name
             </label>
             <input
@@ -135,15 +135,15 @@ export const RemedySelectionForm: React.FC<RemedySelectionFormProps> = ({
               value={patientName}
               onChange={(e) => setPatientName(e.target.value)}
               placeholder="Enter patient's full name"
-              className="w-full rounded-md bg-slate-800 border border-slate-600 text-slate-100 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-cyan-400 focus:border-cyan-400"
+              className="w-full rounded-md bg-white border border-slate-300 text-slate-900 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500"
             />
           </div>
 
           {/* Search by name / abbreviation / symptoms */}
           <div>
-            <label className="block text-sm font-medium text-slate-300 mb-1">
+            <label className="block text-sm font-medium text-slate-700 mb-1">
               Search Remedies
-              <span className="ml-1 text-xs text-slate-400">
+              <span className="ml-1 text-xs font-normal text-slate-500">
                 (name, abbreviation, or symptom keywords)
               </span>
             </label>
@@ -152,21 +152,20 @@ export const RemedySelectionForm: React.FC<RemedySelectionFormProps> = ({
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               placeholder="Type symptoms like 'jaw pain night grinding', or remedy name..."
-              className="w-full rounded-md bg-slate-800 border border-slate-600 text-slate-100 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-cyan-400 focus:border-cyan-400"
+              className="w-full rounded-md bg-white border border-slate-300 text-slate-900 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500"
             />
           </div>
         </div>
       </section>
 
       {/* Remedy list */}
-      {/* Remedy list */}
-      <section className="bg-slate-900/80 border border-slate-700 rounded-xl shadow-lg flex flex-col max-h-[55vh] print-readable">
+      <section className="bg-white border border-slate-200 rounded-xl shadow-sm flex flex-col max-h-[55vh]">
         <div className="px-4 pt-4 pb-2 flex items-baseline justify-between">
           <div>
-            <h2 className="text-lg font-semibold text-slate-100">
+            <h2 className="text-lg font-semibold text-slate-900">
               Remedy List
             </h2>
-            <p className="text-xs text-slate-400">
+            <p className="text-xs text-slate-500">
               Click a row to view keynotes below and use the checkboxes to
               choose potencies.
             </p>
@@ -174,8 +173,8 @@ export const RemedySelectionForm: React.FC<RemedySelectionFormProps> = ({
         </div>
 
         {/* Table header */}
-        <div className="px-4 border-t border-slate-700 bg-slate-900/90 sticky top-0 z-10">
-          <div className="grid grid-cols-[minmax(0,3fr)_minmax(0,1fr)_repeat(3,60px)] text-xs font-semibold text-slate-400 py-2">
+        <div className="px-4 border-t border-slate-200 bg-slate-100/80 sticky top-0 z-10">
+          <div className="grid grid-cols-[minmax(0,3fr)_minmax(0,1fr)_repeat(3,60px)] text-xs font-semibold text-slate-600 py-2">
             <span>Name</span>
             <span>Abbreviation</span>
             {POTENCIES.map((p) => (
@@ -198,18 +197,22 @@ export const RemedySelectionForm: React.FC<RemedySelectionFormProps> = ({
                 type="button"
                 onClick={() => handleRowClick(remedy)}
                 className={[
-                  "w-full text-left px-4 py-2 border-t border-slate-800",
-                  isActive ? "bg-slate-800/80" : "bg-slate-900/40 hover:bg-slate-800/40",
+                  "w-full text-left px-4 py-2 border-t border-slate-200 transition-colors",
+                  isActive
+                    ? "bg-cyan-50"
+                    : "bg-white hover:bg-slate-50",
                 ].join(" ")}
               >
-                <div className="grid grid-cols-[minmax(0,3fr)_minmax(0,1fr)_repeat(3,60px)] items-center text-sm text-slate-100">
+                <div className="grid grid-cols-[minmax(0,3fr)_minmax(0,1fr)_repeat(3,60px)] items-center text-sm text-slate-900">
                   <span className="truncate">{remedy.name}</span>
-                  <span className="text-slate-300">{remedy.abbreviation}</span>
+                  <span className="text-slate-600">
+                    {remedy.abbreviation}
+                  </span>
                   {POTENCIES.map((potency) => (
                     <span key={potency} className="flex justify-center">
                       <input
                         type="checkbox"
-                        className="h-4 w-4 accent-cyan-400 cursor-pointer"
+                        className="h-4 w-4 accent-cyan-500 cursor-pointer"
                         checked={selectedForThis?.has(potency) ?? false}
                         onChange={(e) => {
                           e.stopPropagation();
@@ -224,7 +227,7 @@ export const RemedySelectionForm: React.FC<RemedySelectionFormProps> = ({
           })}
 
           {filteredRemedies.length === 0 && (
-            <div className="px-4 py-6 text-sm text-slate-400">
+            <div className="px-4 py-6 text-sm text-slate-500">
               No remedies found matching your search.
             </div>
           )}
@@ -232,87 +235,74 @@ export const RemedySelectionForm: React.FC<RemedySelectionFormProps> = ({
       </section>
 
       {/* Keynotes panel */}
-      {/* Keynotes panel */}
-      <section className="bg-slate-900/80 border border-slate-700 rounded-xl p-4 md:p-6 shadow-lg print-readable">
-        <h2 className="text-lg font-semibold text-slate-100 mb-3">
+      <section className="bg-white border border-slate-200 rounded-xl p-4 md:p-6 shadow-sm print-readable">
+        <h2 className="text-lg font-semibold text-slate-900 mb-3">
           Remedy Keynotes
         </h2>
 
         {activeRemedy && activeKeynotes ? (
           <div>
-            <h3 className="text-base font-semibold text-cyan-300 mb-1">
+            <h3 className="text-base font-semibold text-cyan-700 mb-1">
               {activeRemedy.name}{" "}
-              <span className="text-xs text-slate-400">
+              <span className="text-xs text-slate-500">
                 ({activeRemedy.abbreviation})
               </span>
             </h3>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm text-slate-100">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm text-slate-900">
               <div className="space-y-1">
                 <div>
-                  <h4 className="font-semibold text-slate-300 text-xs uppercase tracking-wide">
+                  <h4 className="font-semibold text-slate-600 text-xs uppercase tracking-wide">
                     Mental &amp; Emotional Themes
                   </h4>
-                  <p className="text-slate-100">
-                    {activeKeynotes.mentalEmotionalThemes || "—"}
-                  </p>
+                  <p>{activeKeynotes.mentalEmotionalThemes || "—"}</p>
                 </div>
                 <div>
-                  <h4 className="font-semibold text-slate-300 text-xs uppercase tracking-wide">
+                  <h4 className="font-semibold text-slate-600 text-xs uppercase tracking-wide">
                     General Themes
                   </h4>
-                  <p className="text-slate-100">
-                    {activeKeynotes.generalThemes || "—"}
-                  </p>
+                  <p>{activeKeynotes.generalThemes || "—"}</p>
                 </div>
                 <div>
-                  <h4 className="font-semibold text-slate-300 text-xs uppercase tracking-wide">
+                  <h4 className="font-semibold text-slate-600 text-xs uppercase tracking-wide">
                     Key Local Symptoms
                   </h4>
-                  <p className="text-slate-100">
-                    {activeKeynotes.keyLocalSymptoms || "—"}
-                  </p>
+                  <p>{activeKeynotes.keyLocalSymptoms || "—"}</p>
                 </div>
               </div>
 
               <div className="space-y-1">
                 <div>
-                  <h4 className="font-semibold text-slate-300 text-xs uppercase tracking-wide">
+                  <h4 className="font-semibold text-slate-600 text-xs uppercase tracking-wide">
                     Worse from
                   </h4>
-                  <p className="text-slate-100">
-                    {activeKeynotes.worseFrom || "—"}
-                  </p>
+                  <p>{activeKeynotes.worseFrom || "—"}</p>
                 </div>
                 <div>
-                  <h4 className="font-semibold text-slate-300 text-xs uppercase tracking-wide">
+                  <h4 className="font-semibold text-slate-600 text-xs uppercase tracking-wide">
                     Better from
                   </h4>
-                  <p className="text-slate-100">
-                    {activeKeynotes.betterFrom || "—"}
-                  </p>
+                  <p>{activeKeynotes.betterFrom || "—"}</p>
                 </div>
                 <div>
-                  <h4 className="font-semibold text-slate-300 text-xs uppercase tracking-wide">
+                  <h4 className="font-semibold text-slate-600 text-xs uppercase tracking-wide">
                     Sphere / Notes
                   </h4>
-                  <p className="text-slate-100">
-                    {activeKeynotes.notesSphere || "—"}
-                  </p>
+                  <p>{activeKeynotes.notesSphere || "—"}</p>
                 </div>
               </div>
             </div>
           </div>
         ) : (
-          <p className="text-sm text-slate-400">
+          <p className="text-sm text-slate-500">
             Select a remedy from the list above to view its keynotes.
           </p>
         )}
       </section>
 
       {/* Bottom bar – selection count + generate button */}
-      <div className="sticky bottom-0 left-0 right-0 bg-slate-950/95 border-t border-slate-800 py-3 px-4 flex items-center justify-between shadow-[0_-4px_12px_rgba(15,23,42,0.9)]">
-        <span className="text-sm text-slate-300">
+      <div className="sticky bottom-0 left-0 right-0 bg-white border-t border-slate-200 py-3 px-4 flex items-center justify-between shadow-[0_-4px_12px_rgba(148,163,184,0.35)]">
+        <span className="text-sm text-slate-700">
           {selectionCount === 0
             ? "No remedies selected"
             : selectionCount === 1
@@ -323,10 +313,10 @@ export const RemedySelectionForm: React.FC<RemedySelectionFormProps> = ({
           type="button"
           onClick={handleGenerateClick}
           disabled={!patientName.trim() || selectionCount === 0}
-          className={`inline-flex items-center px-4 py-2 rounded-md text-sm font-medium shadow-md ${
+          className={`inline-flex items-center px-4 py-2 rounded-md text-sm font-medium shadow-sm ${
             !patientName.trim() || selectionCount === 0
-              ? "bg-slate-700 text-slate-400 cursor-not-allowed"
-              : "bg-cyan-500 hover:bg-cyan-400 text-slate-900"
+              ? "bg-slate-200 text-slate-400 cursor-not-allowed"
+              : "bg-cyan-500 hover:bg-cyan-400 text-white"
           }`}
         >
           Generate Prescription
@@ -335,4 +325,5 @@ export const RemedySelectionForm: React.FC<RemedySelectionFormProps> = ({
     </div>
   );
 };
+
 
